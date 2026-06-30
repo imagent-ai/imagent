@@ -34,6 +34,10 @@ Live Qwen Image generation is configured through `agent.qwen_image.mode: live`
 and requires `DASHSCOPE_API_KEY` plus either `DASHSCOPE_WORKSPACE_ID` or
 `DASHSCOPE_ENDPOINT`.
 
+Trusted API benchmark runs can use GPT-5.5 as an image judge through
+`configs/api-gate.yaml`. This mode requires `OPENAI_API_KEY` in addition to the
+Qwen Image credentials.
+
 ## Result Comparison
 
 Benchmark results can be compared with configurable acceptance rules:
