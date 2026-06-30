@@ -13,6 +13,7 @@ from typing import Any
 
 from imagent_bench.config import file_sha256, load_yaml, resolve_suite_path, stable_json_sha256
 from imagent_bench.evaluators.checklist import evaluate_case
+from imagent_bench.evaluators.judge import build_image_judge
 from imagent_bench.metrics.aggregate import aggregate
 from imagent_bench.registry import load_agent_class, load_manifest
 
@@ -176,6 +177,7 @@ def run(config_path: Path, agent_arg: str, output_dir: Path) -> dict[str, Any]:
         (output_dir / child).mkdir(exist_ok=True)
 
     agent.setup(config=config, workdir=output_dir)
+    image_judge = build_image_judge(config, output_dir)
 
     seeds = [int(seed) for seed in config.get("runtime", {}).get("seeds", [1001])]
     timeout_seconds = config.get("runtime", {}).get("timeout_seconds_per_case")
@@ -207,7 +209,7 @@ def run(config_path: Path, agent_arg: str, output_dir: Path) -> dict[str, Any]:
                     },
                 }
 
-            evaluation = evaluate_case(case, output, output_dir)
+            evaluation = evaluate_case(case, output, output_dir, image_judge=image_judge)
             case_results.append(
                 {
                     "case_id": case["id"],
@@ -243,6 +245,7 @@ def run(config_path: Path, agent_arg: str, output_dir: Path) -> dict[str, Any]:
             "seeds": seeds,
             "deterministic": bool(config.get("runtime", {}).get("deterministic", True)),
         },
+        "evaluation": config.get("evaluation", {}),
         "metrics": metrics,
         "cases": case_results,
     }
