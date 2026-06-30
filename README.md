@@ -45,3 +45,11 @@ python -m imagent_bench.compare \
   --candidate results/pr/results.json \
   --output results/comparison.json
 ```
+
+## Continuous Benchmarking
+
+Pull requests are evaluated by the offline benchmark workflow in
+`.github/workflows/benchmark-pr.yml`. The workflow installs benchmark code from
+the PR base branch, runs the base Qwen baseline and PR Qwen candidate, then
+compares the results with `configs/pr-gate.yaml` when the Qwen baseline agent
+changes.
