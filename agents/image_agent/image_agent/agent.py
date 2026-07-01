@@ -7,14 +7,14 @@ import time
 from pathlib import Path
 from typing import Any
 
-from openrouter_agent.openrouter_image_api import OpenRouterImageClient
+from image_agent.image_backend_api import ImageBackendClient
 
 
-class OpenRouterBaselineAgent:
-    """Qwen-style baseline with an offline mock mode and a live OpenRouter mode.
+class ImageAgent:
+    """General image agent with an offline mock mode and a live backend mode.
 
     In mock mode it writes a deterministic SVG so the offline suite runs without
-    credentials. In live mode it generates an image through OpenRouter's image API
+    credentials. In live mode it generates an image through the configured backend
     and records the real ``cost_usd`` reported by the gateway.
     """
 
@@ -22,10 +22,10 @@ class OpenRouterBaselineAgent:
         self.config = config
         self.workdir = Path(workdir)
         self.max_feedback_rounds = int(config.get("runtime", {}).get("max_feedback_rounds", 1))
-        image_config = config.get("agent", {}).get("openrouter_image", {})
+        image_config = config.get("agent", {}).get("image_backend", {})
         self.mode = str(image_config.get("mode", "mock"))
         self.image_config = image_config
-        self.client = OpenRouterImageClient(image_config) if self.mode == "live" else None
+        self.client = ImageBackendClient(image_config) if self.mode == "live" else None
 
     def generate(self, case: dict[str, Any], output_dir: Path) -> dict[str, Any]:
         started = time.perf_counter()
@@ -60,7 +60,7 @@ class OpenRouterBaselineAgent:
                     "outputs": 1,
                     "format": image_format,
                     "seed": seed,
-                    "generator": "openrouter-images" if self.mode == "live" else "mock-svg",
+                    "generator": "live-image-backend" if self.mode == "live" else "mock-svg",
                 },
             },
             "grounding": grounding,
@@ -75,7 +75,7 @@ class OpenRouterBaselineAgent:
 
         if self.mode == "live":
             if self.client is None:
-                raise RuntimeError("OpenRouter client was not initialized")
+                raise RuntimeError("image backend client was not initialized")
             generation_metadata = self.client.generate(final_prompt, seed, image_path)
             image_path = Path(generation_metadata["image_path"])
             trace["planning"]["generation_plan"]["format"] = image_path.suffix.lstrip(".")
@@ -85,14 +85,14 @@ class OpenRouterBaselineAgent:
             generation_metadata = {
                 "image_path": str(image_path),
                 "provider": "mock",
-                "model": "deterministic-openrouter-style-baseline",
+                "model": "deterministic-image-agent-baseline",
             }
 
         return {
             "image_path": str(image_path),
             "trace_path": str(trace_path),
             "metadata": {
-                "agent_id": "openrouter-baseline",
+                "agent_id": "image-agent",
                 "seed": seed,
                 "model": generation_metadata.get("model"),
                 "provider": generation_metadata.get("provider"),

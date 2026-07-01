@@ -1,7 +1,7 @@
 # API Benchmark
 
-The trusted API benchmark runs the OpenRouter baseline agent in live OpenRouter
-image mode and evaluates generated images with the OpenRouter image judge
+The trusted API benchmark runs the image agent in live backend mode through
+OpenRouter and evaluates generated images with the chat-completions image judge
 configured in `configs/api-gate.yaml`.
 
 The same `OPENROUTER_API_KEY` covers both generation and judging. OpenRouter
@@ -24,8 +24,8 @@ API run.
 The main-branch API workflow promotes successful benchmark results into:
 
 ```text
-baselines/openrouter_baseline/ia_bench_v1_api/latest.json
-baselines/openrouter_baseline/ia_bench_v1_api/history/
+baselines/image_agent/ia_bench_v1_api/latest.json
+baselines/image_agent/ia_bench_v1_api/history/
 ```
 
 If the required secrets are not configured, the API workflows skip live

@@ -11,8 +11,8 @@ def test_local_smoke_config_is_valid() -> None:
     assert validate_config(load_yaml(path), path) == []
 
 
-def test_openrouter_smoke_config_is_valid() -> None:
-    path = Path("configs/openrouter-smoke.yaml")
+def test_image_agent_smoke_config_is_valid() -> None:
+    path = Path("configs/image-agent-smoke.yaml")
     assert validate_config(load_yaml(path), path) == []
 
 
