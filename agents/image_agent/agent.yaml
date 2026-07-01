@@ -1,6 +1,6 @@
-id: openrouter-baseline
-name: OpenRouter Baseline Agent
-entrypoint: openrouter_agent.agent:OpenRouterBaselineAgent
+id: image-agent
+name: Image Agent
+entrypoint: image_agent.agent:ImageAgent
 version: 0.1.0
 supports:
   plan: true

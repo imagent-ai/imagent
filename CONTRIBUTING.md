@@ -48,7 +48,7 @@ class MyAgent:
 are stripped by the runner) and must write both an image and a JSON **trace** with
 `planning`, `grounding`, `final_generation_context`, and `feedback` sections. The
 benchmark scores how the agent bridges the context gap, not just whether it emits an
-image. See `agents/openrouter_baseline` for a full example.
+image. See `agents/image_agent` for a full example.
 
 If your agent needs extra packages, add `agents/<agent_id>/requirements.txt`.
 Benchmark CI installs that file for both the baseline and candidate agent before running.
@@ -67,9 +67,9 @@ Benchmark CI installs that file for both the baseline and candidate agent before
 python -m pip install -e ".[dev]"
 python -m imagent_bench.config validate configs/local-smoke.yaml
 python -m imagent_bench.runner \
-  --config configs/openrouter-smoke.yaml \
-  --agent agents/openrouter_baseline \
-  --output results/openrouter-smoke
+  --config configs/image-agent-smoke.yaml \
+  --agent agents/image_agent \
+  --output results/image-agent-smoke
 python -m pytest
 ```
 

@@ -301,13 +301,13 @@ class _ApiImageJudge:
         return 0.0
 
 
-class OpenRouterImageJudge(_ApiImageJudge):
-    """Image judge backed by the OpenRouter Chat Completions API.
+class ChatCompletionsImageJudge(_ApiImageJudge):
+    """Image judge backed by a Chat Completions vision endpoint.
 
-    OpenRouter is Chat Completions compatible, so image input uses the ``image_url``
-    content part and structured output uses ``response_format`` with a JSON schema.
-    ``provider.require_parameters`` makes OpenRouter route only to providers that
-    honor the schema instead of returning free-form text.
+    The default backend is OpenRouter's Chat Completions API, so image input uses the
+    ``image_url`` content part and structured output uses ``response_format`` with a
+    JSON schema. ``provider.require_parameters`` makes OpenRouter route only to
+    providers that honor the schema instead of returning free-form text.
     """
 
     provider = "openrouter"
@@ -375,7 +375,7 @@ def build_image_judge(config: dict[str, Any], output_dir: Path):
     if provider == "mock_text":
         return MockTextJudge(config, output_dir)
     if provider == "openrouter":
-        return OpenRouterImageJudge(config, output_dir)
+        return ChatCompletionsImageJudge(config, output_dir)
     raise ValueError(f"Unknown image judge provider: {provider}")
 
 
@@ -406,7 +406,7 @@ def _extract_message_content(response: dict[str, Any]) -> str:
             content = message.get("content")
             if isinstance(content, str) and content.strip():
                 return content
-    raise JudgeError("OpenRouter response did not contain message content")
+    raise JudgeError("chat completions response did not contain message content")
 
 
 def _parse_json_object(text: str) -> dict[str, Any]:

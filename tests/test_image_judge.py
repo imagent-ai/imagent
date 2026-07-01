@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 
 from imagent_bench.evaluators.checklist import evaluate_case
-from imagent_bench.evaluators.judge import OpenRouterImageJudge, build_image_judge
+from imagent_bench.evaluators.judge import ChatCompletionsImageJudge, build_image_judge
 
 
 def _write_case_and_output(tmp_path: Path) -> tuple[dict, dict]:
@@ -43,13 +43,13 @@ def _chat_response(passed: bool, reason: str) -> dict:
     return {"choices": [{"message": {"role": "assistant", "content": content}}]}
 
 
-def test_build_image_judge_returns_openrouter_provider(tmp_path: Path) -> None:
+def test_build_image_judge_returns_chat_completions_provider(tmp_path: Path) -> None:
     judge = build_image_judge(_judge_config(), tmp_path)
-    assert isinstance(judge, OpenRouterImageJudge)
+    assert isinstance(judge, ChatCompletionsImageJudge)
     assert judge.provider == "openrouter"
 
 
-def test_openrouter_judge_fails_closed_without_api_key(monkeypatch, tmp_path: Path) -> None:
+def test_image_judge_fails_closed_without_api_key(monkeypatch, tmp_path: Path) -> None:
     monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
     case, output = _write_case_and_output(tmp_path)
     judge = build_image_judge(_judge_config(), tmp_path)
@@ -61,7 +61,7 @@ def test_openrouter_judge_fails_closed_without_api_key(monkeypatch, tmp_path: Pa
     assert "OPENROUTER_API_KEY" in evaluation["checks"][0]["reason"]
 
 
-def test_openrouter_request_payload_targets_chat_completions(monkeypatch, tmp_path: Path) -> None:
+def test_image_judge_request_payload_targets_chat_completions(monkeypatch, tmp_path: Path) -> None:
     monkeypatch.setenv("OPENROUTER_API_KEY", "test-key")
     case, output = _write_case_and_output(tmp_path)
     judge = build_image_judge(_judge_config(max_output_tokens=800, reasoning_effort="low"), tmp_path)
@@ -77,7 +77,7 @@ def test_openrouter_request_payload_targets_chat_completions(monkeypatch, tmp_pa
     evaluation = evaluate_case(case, output, tmp_path, image_judge=judge)
 
     payload = captured["payload"]
-    # OpenRouter is Chat Completions, not the OpenAI Responses API.
+    # The backend uses Chat Completions, not the OpenAI Responses API.
     assert "messages" in payload
     assert "input" not in payload
     assert "text" not in payload
@@ -96,7 +96,7 @@ def test_openrouter_request_payload_targets_chat_completions(monkeypatch, tmp_pa
     assert evaluation["checks"][0]["provider"] == "openrouter"
 
 
-def test_openrouter_judge_parses_failed_verdict(monkeypatch, tmp_path: Path) -> None:
+def test_image_judge_parses_failed_verdict(monkeypatch, tmp_path: Path) -> None:
     monkeypatch.setenv("OPENROUTER_API_KEY", "test-key")
     case, output = _write_case_and_output(tmp_path)
     judge = build_image_judge(_judge_config(), tmp_path)
@@ -109,7 +109,7 @@ def test_openrouter_judge_parses_failed_verdict(monkeypatch, tmp_path: Path) -> 
     assert evaluation["checks"][0]["reason"] == "no PASS visible"
 
 
-def test_openrouter_judge_records_usage_cost(monkeypatch, tmp_path: Path) -> None:
+def test_image_judge_records_usage_cost(monkeypatch, tmp_path: Path) -> None:
     monkeypatch.setenv("OPENROUTER_API_KEY", "test-key")
     case, output = _write_case_and_output(tmp_path)
     judge = build_image_judge(_judge_config(), tmp_path)
@@ -127,7 +127,7 @@ def test_openrouter_judge_records_usage_cost(monkeypatch, tmp_path: Path) -> Non
     assert judge.total_cost_usd == 0.0123
 
 
-def test_openrouter_judge_rejects_non_boolean_passed_values(monkeypatch, tmp_path: Path) -> None:
+def test_image_judge_rejects_non_boolean_passed_values(monkeypatch, tmp_path: Path) -> None:
     monkeypatch.setenv("OPENROUTER_API_KEY", "test-key")
     case, output = _write_case_and_output(tmp_path)
     judge = build_image_judge(_judge_config(), tmp_path)

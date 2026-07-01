@@ -10,7 +10,7 @@ runtime:
   max_feedback_rounds: 2
 
 agent:
-  openrouter_image:
+  image_backend:
     mode: live
     provider: openrouter
     model: openai/gpt-image-1

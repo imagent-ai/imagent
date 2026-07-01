@@ -90,6 +90,6 @@ jobs:
               await github.rest.issues.addLabels({ ...common, labels: ["benchmark-regression"] });
               body = `❌ **Benchmark regression.** This pull request did not pass the gate in \`configs/pr-gate.yaml\`. Review the [run details](${run.html_url}) and push a fix, or a maintainer will close it.`;
             } else {
-              body = `ℹ️ **Benchmark ran without an enforced gate.** No files under \`agents/openrouter_baseline/\` changed, so the benchmark ran for visibility only. [Run details](${run.html_url}).`;
+              body = `ℹ️ **Benchmark ran without an enforced gate.** No files under \`agents/image_agent/\` changed, so the benchmark ran for visibility only. [Run details](${run.html_url}).`;
             }
             await github.rest.issues.createComment({ ...common, body });

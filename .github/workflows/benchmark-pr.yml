@@ -39,7 +39,7 @@ jobs:
             repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/files \
             --paginate \
             --jq '.[].filename' > results/changed-files.txt
-          if grep -q '^agents/openrouter_baseline/' results/changed-files.txt; then
+          if grep -q '^agents/image_agent/' results/changed-files.txt; then
             echo "enforce_improvement=true" >> "$GITHUB_OUTPUT"
           else
             echo "enforce_improvement=false" >> "$GITHUB_OUTPUT"
@@ -56,11 +56,11 @@ jobs:
         run: |
           python -m pip install -U pip
           python -m pip install -e ".[dev]"
-          ./scripts/install_agent_requirements.sh agents/openrouter_baseline
+          ./scripts/install_agent_requirements.sh agents/image_agent
 
       - name: Install candidate agent requirements
         working-directory: head
-        run: ./scripts/install_agent_requirements.sh agents/openrouter_baseline
+        run: ./scripts/install_agent_requirements.sh agents/image_agent
 
       - name: Validate gate config
         working-directory: base
@@ -75,7 +75,7 @@ jobs:
         run: |
           python -m imagent_bench.runner \
             --config configs/pr-gate.yaml \
-            --agent agents/openrouter_baseline \
+            --agent agents/image_agent \
             --output ../results/base
 
       - name: Run candidate from PR
@@ -83,7 +83,7 @@ jobs:
         run: |
           python -m imagent_bench.runner \
             --config configs/pr-gate.yaml \
-            --agent ../head/agents/openrouter_baseline \
+            --agent ../head/agents/image_agent \
             --output ../results/pr
 
       - name: Compare candidate against baseline
@@ -102,7 +102,7 @@ jobs:
           {
             echo "# Benchmark Comparison"
             echo
-            echo "The benchmark ran for this PR, but the improvement gate was not enforced because no OpenRouter baseline agent files changed."
+            echo "The benchmark ran for this PR, but the improvement gate was not enforced because no image agent files changed."
           } > results/comparison.md
 
       - name: Classify benchmark verdict

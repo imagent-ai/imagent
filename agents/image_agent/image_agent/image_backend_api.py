@@ -10,16 +10,16 @@ from pathlib import Path
 from typing import Any
 
 
-class OpenRouterImageError(RuntimeError):
-    """Raised when the OpenRouter image generation call fails."""
+class ImageBackendError(RuntimeError):
+    """Raised when live image generation fails."""
 
 
-class OpenRouterImageClient:
-    """Generates images through the OpenRouter ``/api/v1/images`` endpoint.
+class ImageBackendClient:
+    """Generates images through the configured live image backend.
 
-    OpenRouter returns base64-encoded image bytes in ``data[].b64_json`` and reports
-    real spend in ``usage.cost`` (credits, roughly USD), which the caller records as
-    ``cost_usd``.
+    By default this client targets OpenRouter's ``/api/v1/images`` endpoint. The
+    backend returns base64-encoded image bytes in ``data[].b64_json`` and reports
+    spend in ``usage.cost``, which the caller records as ``cost_usd``.
     """
 
     def __init__(self, config: dict[str, Any]) -> None:
@@ -28,7 +28,7 @@ class OpenRouterImageClient:
         self.api_key_env = str(config.get("api_key_env", "OPENROUTER_API_KEY"))
         self.api_key = os.environ.get(self.api_key_env)
         if not self.api_key:
-            raise OpenRouterImageError(f"{self.api_key_env} is required for live OpenRouter image generation")
+            raise ImageBackendError(f"{self.api_key_env} is required for live image generation")
         self.endpoint = str(config.get("endpoint", "https://openrouter.ai/api/v1/images"))
         self.timeout_seconds = int(config.get("timeout_seconds", 300))
         self.size = str(config.get("size", "")) or None
@@ -86,12 +86,12 @@ class OpenRouterImageClient:
                 raw = response.read().decode("utf-8")
         except urllib.error.HTTPError as exc:
             body = exc.read().decode("utf-8", errors="replace")
-            raise OpenRouterImageError(f"OpenRouter image HTTP {exc.code}: {body}") from exc
+            raise ImageBackendError(f"image backend HTTP {exc.code}: {body}") from exc
         data = json.loads(raw)
         if not isinstance(data, dict):
-            raise OpenRouterImageError("OpenRouter image response must be a JSON object")
+            raise ImageBackendError("image backend response must be a JSON object")
         if data.get("error"):
-            raise OpenRouterImageError(f"OpenRouter image API error: {data['error']}")
+            raise ImageBackendError(f"image backend API error: {data['error']}")
         return data
 
     def _extract_image(self, response: dict[str, Any]) -> tuple[str, str | None]:
@@ -100,7 +100,7 @@ class OpenRouterImageClient:
             for item in data:
                 if isinstance(item, dict) and item.get("b64_json"):
                     return str(item["b64_json"]), item.get("media_type")
-        raise OpenRouterImageError("OpenRouter image response did not include b64_json data")
+        raise ImageBackendError("image backend response did not include b64_json data")
 
 
 def _resolved_output_path(output_path: Path, media_type: str | None, configured_format: str | None) -> Path:

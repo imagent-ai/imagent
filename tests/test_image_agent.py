@@ -9,18 +9,18 @@ import pytest
 
 from imagent_bench.runner import run
 
-AGENT_ROOT = Path("agents/openrouter_baseline").resolve()
+AGENT_ROOT = Path("agents/image_agent").resolve()
 if str(AGENT_ROOT) not in sys.path:
     sys.path.insert(0, str(AGENT_ROOT))
 
-from openrouter_agent.agent import OpenRouterBaselineAgent
-from openrouter_agent.openrouter_image_api import OpenRouterImageClient
+from image_agent.agent import ImageAgent
+from image_agent.image_backend_api import ImageBackendClient
 
 
-def test_openrouter_baseline_mock_runs_smoke_suite(tmp_path: Path) -> None:
-    result = run(Path("configs/openrouter-smoke.yaml").resolve(), "agents/openrouter_baseline", tmp_path)
+def test_image_agent_mock_runs_smoke_suite(tmp_path: Path) -> None:
+    result = run(Path("configs/image-agent-smoke.yaml").resolve(), "agents/image_agent", tmp_path)
 
-    assert result["agent"]["id"] == "openrouter-baseline"
+    assert result["agent"]["id"] == "image-agent"
     assert result["metrics"]["failed_generations"] == 0
     assert result["metrics"]["total_cases"] == 6
     assert result["metrics"]["pass_rate"] == 1.0
@@ -28,7 +28,7 @@ def test_openrouter_baseline_mock_runs_smoke_suite(tmp_path: Path) -> None:
     assert result["cases"][0]["output"]["metadata"]["provider"] == "mock"
 
 
-def test_openrouter_baseline_live_requires_api_key(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+def test_image_agent_live_requires_api_key(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
     config_path = tmp_path / "live.yaml"
     config_path.write_text(
@@ -42,7 +42,7 @@ runtime:
   deterministic: false
   timeout_seconds_per_case: 60
 agent:
-  openrouter_image:
+  image_backend:
     mode: live
 metrics:
   primary: ia_score
@@ -51,14 +51,14 @@ metrics:
     )
 
     with pytest.raises(Exception, match="OPENROUTER_API_KEY"):
-        run(config_path.resolve(), "agents/openrouter_baseline", tmp_path / "out")
+        run(config_path.resolve(), "agents/image_agent", tmp_path / "out")
 
 
-def test_openrouter_image_client_uses_returned_media_type_extension(
+def test_image_backend_client_uses_returned_media_type_extension(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     monkeypatch.setenv("OPENROUTER_API_KEY", "test-key")
-    client = OpenRouterImageClient({"output_format": "png"})
+    client = ImageBackendClient({"output_format": "png"})
     jpeg_bytes = b"jpeg-bytes"
 
     def fake_post(payload: dict) -> dict:
@@ -81,12 +81,12 @@ def test_openrouter_image_client_uses_returned_media_type_extension(
     assert (tmp_path / "image.jpg").read_bytes() == jpeg_bytes
 
 
-def test_openrouter_baseline_records_actual_live_image_format(
+def test_image_agent_records_actual_live_image_format(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     monkeypatch.setenv("OPENROUTER_API_KEY", "test-key")
-    agent = OpenRouterBaselineAgent()
-    agent.setup({"runtime": {}, "agent": {"openrouter_image": {"mode": "live"}}}, tmp_path)
+    agent = ImageAgent()
+    agent.setup({"runtime": {}, "agent": {"image_backend": {"mode": "live"}}}, tmp_path)
 
     class FakeClient:
         def generate(self, prompt: str, seed: int, output_path: Path) -> dict[str, object]:

@@ -3,8 +3,8 @@
 The PR benchmark workflow checks out both the base branch and the pull request
 head. It installs benchmark code from the base checkout, then evaluates:
 
-- the OpenRouter baseline agent from the base checkout,
-- the OpenRouter candidate agent from the pull request checkout.
+- the image agent from the base checkout,
+- the candidate image agent from the pull request checkout.
 
 The comparison step uses acceptance rules from `configs/pr-gate.yaml` in the
 base checkout. This prevents a pull request from weakening the benchmark runner,
@@ -12,7 +12,7 @@ task suite, evaluator, or thresholds in the same change that it is trying to
 merge.
 
 The workflow runs the benchmark for every PR. The strict improvement gate is
-enforced only when files under `agents/openrouter_baseline/` change, so
+enforced only when files under `agents/image_agent/` change, so
 documentation, configuration, or CI-only changes can still be reviewed without
 pretending to be agent improvements. In those cases the follow-up verdict
 workflow posts a neutral benchmark comment instead of labeling the PR as passed.

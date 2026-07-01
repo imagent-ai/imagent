@@ -23,31 +23,31 @@ wheel includes the `imagent_bench` package and bundled task data, but it does
 not install the repository-local `configs/` files or bundled baseline agent
 directories.
 
-## OpenRouter Baseline
+## Image Agent
 
-The repository includes an OpenRouter-backed baseline agent with a deterministic
-mock mode for local testing:
+The repository includes a general image agent with a deterministic mock mode for
+local testing:
 
 ```bash
 python -m imagent_bench.runner \
-  --config configs/openrouter-smoke.yaml \
-  --agent agents/openrouter_baseline \
-  --output results/openrouter-smoke
+  --config configs/image-agent-smoke.yaml \
+  --agent agents/image_agent \
+  --output results/image-agent-smoke
 ```
 
-Live generation is configured through `agent.openrouter_image.mode: live` and
+Live generation is configured through `agent.image_backend.mode: live` and
 requires `OPENROUTER_API_KEY`. It calls OpenRouter's image API and records the
 gateway-reported spend as `cost_usd`.
 
-Trusted API benchmark runs use the OpenRouter image judge configured in
-`configs/api-gate.yaml`. This mode also uses the OpenRouter baseline agent, so
+Trusted API benchmark runs use the chat-completions image judge configured in
+`configs/api-gate.yaml`. This mode also uses the image agent, so
 `OPENROUTER_API_KEY` covers both generation and judging.
 
 The offline smoke and PR gate configs use the deterministic `mock_text` image
 judge by default. That provider inspects generated file text for stable contract
 testing; it is not a real visual-quality or semantic image assessment.
 
-The image judge runs through the OpenRouter Chat Completions API (default model
+The image judge runs through a chat-completions vision API (default model
 `openai/gpt-4o`). This mode reads `OPENROUTER_API_KEY` and reaches many
 vision-capable models through a single credential.
 
@@ -67,16 +67,15 @@ python -m imagent_bench.compare \
 
 Pull requests are evaluated by the offline benchmark workflow in
 `.github/workflows/benchmark-pr.yml`. The workflow installs benchmark code from
-the PR base branch, runs the base OpenRouter baseline and PR OpenRouter
-candidate, then compares the results with `configs/pr-gate.yaml` when the
-OpenRouter baseline agent changes.
+the PR base branch, runs the base image agent and candidate image agent, then
+compares the results with `configs/pr-gate.yaml` when the image agent changes.
 
 Clean main-branch benchmark results can be promoted into baseline history with:
 
 ```bash
 python -m imagent_bench.promote_baseline \
   --result results/api-main/results.json \
-  --baseline-dir baselines/openrouter_baseline/ia_bench_v1_api
+  --baseline-dir baselines/image_agent/ia_bench_v1_api
 ```
 
-See `docs/api_benchmark.md` for the trusted OpenRouter benchmark workflow setup.
+See `docs/api_benchmark.md` for the trusted API benchmark workflow setup.
