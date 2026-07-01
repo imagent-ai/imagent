@@ -18,6 +18,11 @@ python -m imagent_bench.runner \
 The smoke suite writes normalized JSON results, per-case traces, image artifacts,
 and a Markdown summary under the selected output directory.
 
+These commands assume a source checkout of this repository. The published Python
+wheel includes the `imagent_bench` package and bundled task data, but it does
+not install the repository-local `configs/` files or bundled baseline agent
+directories.
+
 ## Qwen Baseline
 
 The repository includes a Qwen-style baseline agent with a deterministic mock
@@ -51,6 +56,10 @@ gateway-reported spend as `cost_usd`.
 Trusted API benchmark runs can use GPT-5.5 as an image judge through
 `configs/api-gate.yaml`. This mode requires `OPENAI_API_KEY` in addition to the
 Qwen Image credentials.
+
+The offline smoke and PR gate configs use the deterministic `mock_text` image
+judge by default. That provider inspects generated file text for stable contract
+testing; it is not a real visual-quality or semantic image assessment.
 
 The image judge can also run through the OpenRouter Chat Completions API by setting
 `evaluation.image_judge.provider: openrouter` (default model `openai/gpt-4o`). This
