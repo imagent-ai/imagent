@@ -31,7 +31,7 @@ local testing:
 ```bash
 python -m imagent_bench.runner \
   --config configs/image-agent-smoke.yaml \
-  --agent agents/image_agent \
+  --agent agent \
   --output results/image-agent-smoke
 ```
 

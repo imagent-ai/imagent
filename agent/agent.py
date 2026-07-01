@@ -7,7 +7,7 @@ import time
 from pathlib import Path
 from typing import Any
 
-from image_agent.image_backend_api import ImageBackendClient
+from image_backend_api import ImageBackendClient
 
 
 class ImageAgent:

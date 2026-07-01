@@ -12,7 +12,7 @@ task suite, evaluator, or thresholds in the same change that it is trying to
 merge.
 
 The workflow runs the benchmark for every PR. The strict improvement gate is
-enforced only when files under `agents/image_agent/` change, so
+enforced only when files under `agent/` change, so
 documentation, configuration, or CI-only changes can still be reviewed without
 pretending to be agent improvements. In those cases the follow-up verdict
 workflow posts a neutral benchmark comment instead of labeling the PR as passed.
