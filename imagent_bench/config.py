@@ -55,6 +55,31 @@ def resolve_suite_path(config: dict[str, Any], config_path: str | Path) -> Path:
     return REPO_ROOT / "imagent_bench" / "tasks" / suite_id / "suite.yaml"
 
 
+def _task_validator() -> Draft202012Validator:
+    schema = load_json(REPO_ROOT / "imagent_bench" / "schemas" / "task.schema.json")
+    return Draft202012Validator(schema)
+
+
+def _validate_task_file(path: Path, validator: Draft202012Validator) -> list[str]:
+    errors: list[str] = []
+    with path.open("r", encoding="utf-8") as handle:
+        for line_number, line in enumerate(handle, start=1):
+            stripped = line.strip()
+            if not stripped:
+                continue
+            try:
+                data = json.loads(stripped)
+            except json.JSONDecodeError as exc:
+                errors.append(f"{path}:{line_number} invalid JSON: {exc}")
+                continue
+            if not isinstance(data, dict):
+                errors.append(f"{path}:{line_number} must be a JSON object")
+                continue
+            for error in validator.iter_errors(data):
+                errors.append(f"{path}:{line_number} schema error: {error.message}")
+    return errors
+
+
 def validate_config(config: dict[str, Any], config_path: str | Path) -> list[str]:
     errors: list[str] = []
     if "suite" not in config:
@@ -79,6 +104,25 @@ def validate_config(config: dict[str, Any], config_path: str | Path) -> list[str
         suite_path = resolve_suite_path(config, config_path)
         if not suite_path.exists():
             errors.append(f"suite file does not exist: {suite_path}")
+        else:
+            suite_config = load_yaml(suite_path)
+            task_files = suite_config.get("tasks", {})
+            if not isinstance(task_files, dict):
+                errors.append(f"{suite_path} tasks must be a mapping")
+            else:
+                selected_tasks = suite.get("tasks") or list(task_files.keys())
+                for task in selected_tasks:
+                    if task not in task_files:
+                        errors.append(f"task {task!r} is not registered in {suite_path}")
+                if not errors:
+                    validator = _task_validator()
+                    suite_root = suite_path.parent
+                    for task in selected_tasks:
+                        task_path = suite_root / str(task_files[task])
+                        if not task_path.exists():
+                            errors.append(f"task file does not exist: {task_path}")
+                            continue
+                        errors.extend(_validate_task_file(task_path, validator))
 
     rules = config.get("acceptance", {}).get("rules", [])
     if rules and not isinstance(rules, list):
