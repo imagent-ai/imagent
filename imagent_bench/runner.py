@@ -191,8 +191,8 @@ def run(config_path: Path, agent_arg: str, output_dir: Path) -> dict[str, Any]:
             run_id = f"{case['id']}--seed-{seed}"
             random.seed(seed)
             started = time.perf_counter()
+            public_case = _public_case(case, seed, run_id, output_dir)
             try:
-                public_case = _public_case(case, seed, run_id, output_dir)
                 with _timeout(timeout_seconds):
                     output = agent.generate(public_case, output_dir)
                 if not isinstance(output, dict):
