@@ -51,6 +51,7 @@ benchmark scores how the agent bridges the context gap, not just whether it emit
 image. See `agents/openrouter_baseline` for a full example.
 
 If your agent needs extra packages, add `agents/<agent_id>/requirements.txt`.
+Benchmark CI installs that file for both the baseline and candidate agent before running.
 
 ## Pull request rules
 

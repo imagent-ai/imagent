@@ -56,6 +56,11 @@ jobs:
         run: |
           python -m pip install -U pip
           python -m pip install -e ".[dev]"
+          ./scripts/install_agent_requirements.sh agents/openrouter_baseline
+
+      - name: Install candidate agent requirements
+        working-directory: head
+        run: ./scripts/install_agent_requirements.sh agents/openrouter_baseline
 
       - name: Validate gate config
         working-directory: base

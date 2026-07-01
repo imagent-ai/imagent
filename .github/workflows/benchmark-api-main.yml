@@ -48,6 +48,7 @@ jobs:
         run: |
           python -m pip install -U pip
           python -m pip install -e ".[dev]"
+          ./scripts/install_agent_requirements.sh agents/openrouter_baseline
 
       - name: Run trusted API benchmark
         if: steps.api_secrets.outputs.available == 'true'
