@@ -31,8 +31,7 @@ comments, formatting, or documentation-only changes.
 
 ## Adding or improving an agent
 
-Agents live under `agents/<agent_id>/` with an `agent.yaml` manifest and a Python
-class implementing two methods:
+The built-in agent lives under `agent/` with an `agent.yaml` manifest and Python source files:
 
 ```python
 class MyAgent:
@@ -48,9 +47,9 @@ class MyAgent:
 are stripped by the runner) and must write both an image and a JSON **trace** with
 `planning`, `grounding`, `final_generation_context`, and `feedback` sections. The
 benchmark scores how the agent bridges the context gap, not just whether it emits an
-image. See `agents/image_agent` for a full example.
+image. See `agent/` for a full example.
 
-If your agent needs extra packages, add `agents/<agent_id>/requirements.txt`.
+If the built-in agent needs extra packages, add `agent/requirements.txt`.
 Benchmark CI installs that file for both the baseline and candidate agent before running.
 
 ## Pull request rules
@@ -68,7 +67,7 @@ python -m pip install -e ".[dev]"
 python -m imagent_bench.config validate configs/local-smoke.yaml
 python -m imagent_bench.runner \
   --config configs/image-agent-smoke.yaml \
-  --agent agents/image_agent \
+  --agent agent \
   --output results/image-agent-smoke
 python -m pytest
 ```

@@ -9,16 +9,16 @@ import pytest
 
 from imagent_bench.runner import run
 
-AGENT_ROOT = Path("agents/image_agent").resolve()
+AGENT_ROOT = Path("agent").resolve()
 if str(AGENT_ROOT) not in sys.path:
     sys.path.insert(0, str(AGENT_ROOT))
 
-from image_agent.agent import ImageAgent
-from image_agent.image_backend_api import ImageBackendClient
+from agent import ImageAgent
+from image_backend_api import ImageBackendClient
 
 
 def test_image_agent_mock_runs_smoke_suite(tmp_path: Path) -> None:
-    result = run(Path("configs/image-agent-smoke.yaml").resolve(), "agents/image_agent", tmp_path)
+    result = run(Path("configs/image-agent-smoke.yaml").resolve(), "agent", tmp_path)
 
     assert result["agent"]["id"] == "image-agent"
     assert result["metrics"]["failed_generations"] == 0
@@ -51,7 +51,7 @@ metrics:
     )
 
     with pytest.raises(Exception, match="OPENROUTER_API_KEY"):
-        run(config_path.resolve(), "agents/image_agent", tmp_path / "out")
+        run(config_path.resolve(), "agent", tmp_path / "out")
 
 
 def test_image_backend_client_uses_returned_media_type_extension(

@@ -1,1 +1,0 @@
-"""General image agent package."""
