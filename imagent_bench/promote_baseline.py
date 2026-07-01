@@ -7,6 +7,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from imagent_bench.config import validate_result_schema
+
 
 def _load_json(path: Path) -> dict[str, Any]:
     with path.open("r", encoding="utf-8") as handle:
@@ -23,8 +25,30 @@ def _write_json(path: Path, data: Any) -> None:
         handle.write("\n")
 
 
+def _validate_promotable_result(result: dict[str, Any]) -> None:
+    failures = [f"schema error: {error}" for error in validate_result_schema(result)]
+
+    metrics = result.get("metrics", {})
+    total_cases = metrics.get("total_cases")
+    completed_cases = metrics.get("completed_cases")
+    failed_generations = metrics.get("failed_generations", 0)
+
+    if total_cases is None or int(total_cases) <= 0:
+        failures.append(f"invalid total_cases={total_cases!r}")
+    if completed_cases is None or total_cases is None or int(completed_cases) != int(total_cases):
+        failures.append(
+            f"incomplete benchmark run: completed_cases={completed_cases!r} total_cases={total_cases!r}"
+        )
+    if int(failed_generations or 0) != 0:
+        failures.append(f"failed_generations must be 0, got {failed_generations!r}")
+
+    if failures:
+        raise ValueError("result is not promotable: " + "; ".join(failures))
+
+
 def promote(result_path: Path, baseline_dir: Path, commit_sha: str | None = None) -> dict[str, Any]:
     result = _load_json(result_path)
+    _validate_promotable_result(result)
     commit = commit_sha or os.environ.get("GITHUB_SHA") or "unknown"
     promoted_at = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     date = promoted_at[:10]
@@ -40,6 +64,7 @@ def promote(result_path: Path, baseline_dir: Path, commit_sha: str | None = None
         "runtime": result.get("runtime", {}),
         "evaluation": result.get("evaluation", {}),
         "metrics": result.get("metrics", {}),
+        "cases": result.get("cases", []),
         "source_result": str(result_path),
     }
 
