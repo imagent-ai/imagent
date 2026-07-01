@@ -112,6 +112,12 @@ jobs:
         run: |
           python -m pip install -U pip
           python -m pip install -e ".[dev]"
+          ./scripts/install_agent_requirements.sh agents/openrouter_baseline
+
+      - name: Install API candidate agent requirements
+        if: steps.api_secrets.outputs.available == 'true' && steps.api_config.outputs.compatible == 'true'
+        working-directory: head
+        run: ./scripts/install_agent_requirements.sh agents/openrouter_baseline
 
       - name: Validate API gate config
         if: steps.api_secrets.outputs.available == 'true' && steps.api_config.outputs.compatible == 'true'
