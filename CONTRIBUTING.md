@@ -49,4 +49,17 @@ python -m pytest
 Live generation requires `OPENROUTER_API_KEY`.
 
 Benchmark configs, task suites, and gating logic are intentionally out of scope
-for this repository.
+for this repository. They live in `imagent-bench`.
+
+From sibling checkouts:
+
+```bash
+python -m pip install -e ../imagent-bench
+imagent-bench run \
+  --repository . \
+  --config ../imagent-bench/configs/official.json \
+  --output-dir benchmark-output \
+  --fail-on-policy
+```
+
+Pull requests run the same deterministic official benchmark in GitHub Actions.

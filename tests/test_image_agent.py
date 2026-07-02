@@ -63,6 +63,61 @@ def test_image_agent_setup_rejects_unknown_image_backend_mode(tmp_path: Path) ->
         agent.setup(_mock_config(mode="liv"), tmp_path)
 
 
+def test_image_backend_client_supports_url_image_responses(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    captured_payload = {}
+    monkeypatch.setenv("ZAI_API_KEY", "test-key")
+    client = ImageBackendClient(
+        {
+            "provider": "zai",
+            "api_key_env": "ZAI_API_KEY",
+            "endpoint": "https://api.z.ai/api/paas/v4/images/generations",
+            "model": "glm-image",
+            "size": "1024x1024",
+            "quality": "standard",
+            "output_format": "png",
+            "send_seed": False,
+            "send_output_format": False,
+        }
+    )
+
+    def fake_post_json(payload):  # noqa: ANN001
+        captured_payload.update(payload)
+        return {"data": [{"url": "https://example.test/generated.png"}]}
+
+    monkeypatch.setattr(client, "_post_json", fake_post_json)
+    monkeypatch.setattr(client, "_download_image", lambda url: (b"image-bytes", "image/png"))
+
+    result = client.generate("Create a small poster.", 1234, tmp_path / "output.bin")
+
+    assert Path(result["image_path"]).read_bytes() == b"image-bytes"
+    assert result["provider"] == "zai"
+    assert result["media_type"] == "image/png"
+    assert captured_payload["model"] == "glm-image"
+    assert captured_payload["quality"] == "standard"
+    assert "seed" not in captured_payload
+    assert "output_format" not in captured_payload
+
+
+def test_image_agent_allows_single_candidate_for_live_smoke(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    agent = _setup_agent(monkeypatch, tmp_path)
+    assert agent._candidate_seeds(100, 0) == [100, 101]
+
+    agent.setup(
+        {
+            "runtime": {"candidates_per_round": 1},
+            "agent": {"image_backend": {"mode": "mock"}},
+            "evaluation": {"image_judge": {"provider": "mock_text"}},
+        },
+        tmp_path,
+    )
+
+    assert agent._candidate_seeds(100, 0) == [100]
+
+
 def test_image_agent_mock_generate_writes_svg_and_trace(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:

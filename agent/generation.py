@@ -18,7 +18,8 @@ except ImportError:  # pragma: no cover - manifest loader imports modules outsid
 class GenerationMixin:
     def _candidate_seeds(self, seed: int, round_index: int) -> list[int]:
         base = seed + (round_index * 100)
-        return [base, base + 1]
+        count = max(1, int(getattr(self, "candidates_per_round", 2)))
+        return [base + offset for offset in range(count)]
 
     def _candidate_variant(self, round_index: int, candidate_index: int) -> dict[str, Any]:
         variant = dict(VARIANT_CONFIGS[candidate_index % len(VARIANT_CONFIGS)])
