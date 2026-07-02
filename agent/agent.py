@@ -28,7 +28,7 @@ class ImageAgent(GroundingMixin, GenerationMixin, RenderingMixin):
         self.config = config
         self.workdir = Path(workdir).expanduser().resolve()
         runtime = config.get("runtime", {})
-        self.max_feedback_rounds = int(runtime.get("max_feedback_rounds", 1))
+        self.max_feedback_rounds = max(0, int(runtime.get("max_feedback_rounds", 1)))
         image_config = config.get("agent", {}).get("image_backend", {})
         mode = str(image_config.get("mode", "mock")).strip().lower()
         if mode not in {"mock", "live"}:
@@ -76,7 +76,7 @@ class ImageAgent(GroundingMixin, GenerationMixin, RenderingMixin):
         total_generation_cost = 0.0
         total_verifier_cost = 0.0
         total_candidates = 0
-        round_count = 1 if self.max_feedback_rounds <= 0 else 2
+        round_count = 1 + self.max_feedback_rounds
 
         for round_index in range(round_count):
             candidates: list[dict[str, Any]] = []

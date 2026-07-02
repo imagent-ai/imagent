@@ -435,6 +435,31 @@ def test_image_agent_revises_after_round_zero_failure(
     assert "PASS" in trace["final_generation_context"]["prompt"]
 
 
+def test_image_agent_honors_configured_feedback_rounds(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    agent = _setup_agent(monkeypatch, tmp_path, max_feedback_rounds=3)
+    monkeypatch.setattr(
+        agent,
+        "_score_candidate",
+        lambda case, output_dir, candidate, spec: {
+            "score": 0.0,
+            "passed": False,
+            "failed_checks": ["PASS"],
+            "critique": ["Add exact visible text: PASS"],
+            "cost_usd": 0.0,
+        },
+    )
+
+    output = agent.generate(_feedback_case(), tmp_path)
+    trace = json.loads(Path(output["trace_path"]).read_text(encoding="utf-8"))
+
+    assert len(trace["feedback"]) == 4
+    assert len(trace["feedback_attempts"]) == 8
+    assert trace["feedback"][-1]["round"] == 3
+    assert trace["feedback_attempts"][-1]["round"] == 3
+
+
 def test_build_image_verifier_normalizes_live_mode(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
