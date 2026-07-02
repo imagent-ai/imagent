@@ -7,7 +7,10 @@ import time
 from pathlib import Path
 from typing import Any
 
-from image_backend_api import ImageBackendClient
+try:
+    from .image_backend_api import ImageBackendClient
+except ImportError:  # pragma: no cover - manifest loader imports this module outside a package
+    from image_backend_api import ImageBackendClient
 
 
 class ImageAgent:

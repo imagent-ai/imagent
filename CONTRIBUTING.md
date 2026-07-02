@@ -1,24 +1,7 @@
 # Contributing
 
-Thanks for contributing to `imagent`. This repository is an open benchmark for
-image agents: contributions are **agent improvements**, and every pull request is
-scored by the benchmark. This repo participates in Gittensor (Bittensor Subnet 74),
-so merged pull requests are recognized contributions.
-
-## How contributions are evaluated
-
-Every pull request runs the benchmark in CI (`.github/workflows/benchmark-pr.yml`).
-The workflow installs the benchmark and tasks from the **base branch** (never from
-the PR), runs the current baseline agent, then runs your candidate agent, and
-compares the two with the acceptance rules in `configs/pr-gate.yaml`.
-
-- A candidate agent **must not regress** the baseline, and an agent change is
-  expected to **improve** the primary metric (`ia_score`).
-- Pull requests that pass the gate are eligible to **merge**; changes that regress
-  the benchmark are **closed**.
-
-Because the benchmark, tasks, and thresholds always come from the base branch, you
-cannot weaken the gate in the same pull request that changes the agent.
+Thanks for contributing to `imagent`. This repository owns the built-in image
+agent implementation.
 
 ## What to work on
 
@@ -26,8 +9,8 @@ Start from an open [issue](https://github.com/imagent-ai/imagent/issues). Issues
 labeled `good first issue` are the easiest entry points, and `crown` marks the
 highest-value work. Comment on an issue to claim it before you start.
 
-Prefer substantive agent code — new functions, classes, and capabilities — over
-comments, formatting, or documentation-only changes.
+Prefer substantive agent code over comments, formatting, or documentation-only
+changes.
 
 ## Adding or improving an agent
 
@@ -43,14 +26,10 @@ class MyAgent:
         ...
 ```
 
-`generate` receives only public case fields (expected answers and evaluator notes
-are stripped by the runner) and must write both an image and a JSON **trace** with
-`planning`, `grounding`, `final_generation_context`, and `feedback` sections. The
-benchmark scores how the agent bridges the context gap, not just whether it emits an
-image. See `agent/` for a full example.
+`generate` receives a public case payload and must write both an image and a
+JSON trace. See `agent/` for the built-in implementation.
 
 If the built-in agent needs extra packages, add `agent/requirements.txt`.
-Benchmark CI installs that file for both the baseline and candidate agent before running.
 
 ## Pull request rules
 
@@ -64,12 +43,10 @@ Benchmark CI installs that file for both the baseline and candidate agent before
 
 ```bash
 python -m pip install -e ".[dev]"
-python -m imagent_bench.config validate configs/local-smoke.yaml
-python -m imagent_bench.runner \
-  --config configs/image-agent-smoke.yaml \
-  --agent agent \
-  --output results/image-agent-smoke
 python -m pytest
 ```
 
-The offline smoke suite is deterministic and needs no credentials.
+Live generation requires `OPENROUTER_API_KEY`.
+
+Benchmark configs, task suites, and gating logic are intentionally out of scope
+for this repository.

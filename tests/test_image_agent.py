@@ -2,56 +2,53 @@ from __future__ import annotations
 
 import base64
 import json
-import sys
 from pathlib import Path
 
 import pytest
 
-from imagent_bench.runner import run
-
-AGENT_ROOT = Path("agent").resolve()
-if str(AGENT_ROOT) not in sys.path:
-    sys.path.insert(0, str(AGENT_ROOT))
-
 from agent import ImageAgent
-from image_backend_api import ImageBackendClient
+from agent.image_backend_api import ImageBackendClient
 
 
-def test_image_agent_mock_runs_smoke_suite(tmp_path: Path) -> None:
-    result = run(Path("configs/image-agent-smoke.yaml").resolve(), "agent", tmp_path)
+def _mock_config(*, mode: str = "mock") -> dict:
+    return {
+        "runtime": {"max_feedback_rounds": 1},
+        "agent": {"image_backend": {"mode": mode}},
+    }
 
-    assert result["agent"]["id"] == "image-agent"
-    assert result["metrics"]["failed_generations"] == 0
-    assert result["metrics"]["total_cases"] == 6
-    assert result["metrics"]["pass_rate"] == 1.0
-    assert result["metrics"]["checklist_accuracy"] == 1.0
-    assert result["cases"][0]["output"]["metadata"]["provider"] == "mock"
+
+def test_image_agent_mock_generate_writes_svg_and_trace(tmp_path: Path) -> None:
+    agent = ImageAgent()
+    agent.setup(_mock_config(), tmp_path)
+
+    output = agent.generate(
+        {
+            "run_id": "plan-layout-001--seed-1001",
+            "capability": "plan",
+            "prompt": "Create a three-panel infographic titled Context Gap Toolkit with sections Plan, Ground, Verify.",
+            "seed": 1001,
+            "allowed_tools": ["plan"],
+        },
+        tmp_path,
+    )
+
+    image_path = Path(output["image_path"])
+    trace_path = Path(output["trace_path"])
+    trace = json.loads(trace_path.read_text(encoding="utf-8"))
+
+    assert image_path.exists()
+    assert trace_path.exists()
+    assert output["metadata"]["provider"] == "mock"
+    assert trace["planning"]["generation_plan"]["format"] == "svg"
+    assert "Context Gap Toolkit" in image_path.read_text(encoding="utf-8")
 
 
 def test_image_agent_live_requires_api_key(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
-    config_path = tmp_path / "live.yaml"
-    config_path.write_text(
-        """
-suite:
-  id: ia_bench_v1
-  tasks: [plan]
-  max_cases: 1
-runtime:
-  seeds: [1001]
-  deterministic: false
-  timeout_seconds_per_case: 60
-agent:
-  image_backend:
-    mode: live
-metrics:
-  primary: ia_score
-""",
-        encoding="utf-8",
-    )
+    agent = ImageAgent()
 
     with pytest.raises(Exception, match="OPENROUTER_API_KEY"):
-        run(config_path.resolve(), "agent", tmp_path / "out")
+        agent.setup(_mock_config(mode="live"), tmp_path)
 
 
 def test_image_backend_client_uses_returned_media_type_extension(
@@ -86,7 +83,7 @@ def test_image_agent_records_actual_live_image_format(
 ) -> None:
     monkeypatch.setenv("OPENROUTER_API_KEY", "test-key")
     agent = ImageAgent()
-    agent.setup({"runtime": {}, "agent": {"image_backend": {"mode": "live"}}}, tmp_path)
+    agent.setup(_mock_config(mode="live"), tmp_path)
 
     class FakeClient:
         def generate(self, prompt: str, seed: int, output_path: Path) -> dict[str, object]:

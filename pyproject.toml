@@ -5,14 +5,11 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "imagent"
 version = "0.1.0"
-description = "Image-agent benchmark and baseline implementations."
+description = "Built-in image agent package."
 readme = "README.md"
 requires-python = ">=3.10"
 license = {text = "MIT"}
-dependencies = [
-  "PyYAML>=6.0.1",
-  "jsonschema>=4.22.0"
-]
+dependencies = []
 
 [project.optional-dependencies]
 dev = [
@@ -23,8 +20,9 @@ dev = [
 include-package-data = true
 
 [tool.setuptools.packages.find]
-include = ["imagent_bench*"]
+include = ["agent*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-q"
+asyncio_default_fixture_loop_scope = "function"

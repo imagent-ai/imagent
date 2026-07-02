@@ -5,15 +5,15 @@ body:
   - type: markdown
     attributes:
       value: |
-        Improvements should raise the benchmark's `ia_score` without regressing other
-        metrics. Comment on the issue to claim it before you start. See
+        Use this issue for agent behavior, architecture, generation quality,
+        or tool-use improvements. See
         [CONTRIBUTING.md](../blob/main/CONTRIBUTING.md).
   - type: input
     id: area
     attributes:
       label: Capability or area
       description: Which capability or component does this target?
-      placeholder: plan | reason | search | memory | feedback | judge | agent | harness
+      placeholder: plan | reason | search | memory | feedback | judge | agent
     validations:
       required: true
   - type: textarea
@@ -27,13 +27,13 @@ body:
     id: proposal
     attributes:
       label: Proposed change
-      description: What change would improve the benchmark, and roughly which files?
+      description: What should change, and roughly which files are involved?
     validations:
       required: true
   - type: textarea
     id: impact
     attributes:
-      label: Expected benchmark impact
-      description: Which metric(s) should improve (for example ia_score or pass_rate)?
+      label: Expected agent impact
+      description: What user-visible or architectural improvement should this produce?
     validations:
       required: false
