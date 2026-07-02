@@ -212,6 +212,38 @@ def test_image_agent_builds_structured_spec_from_asset_brief(
     assert spec["must_include"][:4] == ["Launch Readiness Board", "Scope", "Risks", "Owners"]
 
 
+def test_image_agent_resolves_relative_asset_paths_from_workdir(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    workdir = tmp_path / "workspace"
+    workdir.mkdir()
+    asset = workdir / "brief.json"
+    asset.write_text(
+        json.dumps(
+            {
+                "title": "Launch Readiness Board",
+                "layout": "three_panel",
+                "required_text": ["Launch Readiness Board"],
+            }
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.chdir(tmp_path)
+    agent = _setup_agent(monkeypatch, workdir)
+
+    grounding = agent._build_grounding(
+        {
+            "capability": "plan",
+            "prompt": "Create a release-readiness board using the provided brief asset.",
+            "assets": ["brief.json"],
+            "allowed_tools": ["plan"],
+        }
+    )
+
+    assert grounding["asset"][0]["title"] == "Launch Readiness Board"
+    assert grounding["asset"][0]["source"] == str(asset)
+
+
 def test_image_agent_search_ranks_top_three_facts(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
@@ -244,6 +276,39 @@ def test_image_agent_search_ranks_top_three_facts(
     assert len(results) == 3
     assert results[0]["fact"] == "Image-Agent reduces the context gap through planning."
     assert all("bird migration" not in item["fact"] for item in results)
+
+
+def test_image_agent_resolves_relative_search_snapshots_from_workdir(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    workdir = tmp_path / "workspace"
+    workdir.mkdir()
+    snapshot = workdir / "snapshot.json"
+    snapshot.write_text(
+        json.dumps(
+            {
+                "title": "Image-Agent",
+                "facts": [
+                    "Image-Agent reduces the context gap through planning.",
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.chdir(tmp_path)
+    agent = _setup_agent(monkeypatch, workdir)
+
+    results = agent._search(
+        {
+            "capability": "search",
+            "prompt": "Create a research card about Image-Agent planning.",
+            "allowed_tools": ["search"],
+            "search_snapshots": ["snapshot.json"],
+        }
+    )
+
+    assert len(results) == 1
+    assert results[0]["source"] == str(snapshot)
 
 
 def test_image_agent_memory_maps_visual_constraints(
