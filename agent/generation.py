@@ -136,6 +136,62 @@ class GenerationMixin:
             },
         }
 
+    def _failed_candidate(
+        self,
+        case: dict[str, Any],
+        output_dir: Path,
+        run_id: str,
+        seed: int,
+        round_index: int,
+        candidate_index: int,
+        spec: dict[str, Any],
+        variant: dict[str, Any],
+        grounding: dict[str, list[dict[str, Any]]],
+        tool_calls: list[dict[str, Any]],
+        error: Exception,
+    ) -> dict[str, Any]:
+        prompt = self._build_candidate_prompt(spec, variant, round_index, candidate_index)
+        suffix = ".png" if self.mode == "live" else ".svg"
+        candidate_image_path = output_dir / "images" / "candidates" / run_id / f"round-{round_index}-candidate-{candidate_index}{suffix}"
+        provider = "openrouter" if self.mode == "live" else "mock"
+        model = getattr(self.client, "model", "") if self.mode == "live" else "deterministic-image-agent-mock"
+        case_id = str(case.get("id") or case.get("run_id") or "unknown-case")
+        return {
+            "case_id": case_id,
+            "round": round_index,
+            "candidate_index": candidate_index,
+            "prompt": prompt,
+            "image_path": candidate_image_path,
+            "metadata": {
+                "image_path": str(candidate_image_path),
+                "provider": provider,
+                "model": model,
+                "usage": {},
+                "cost_usd": 0.0,
+                "latency_ms": 0.0,
+                "error": str(error),
+            },
+            "trace": {
+                "planning": {
+                    "missing_context": self._missing_context(case),
+                    "content_plan": self._content_plan(spec),
+                    "generation_plan": {
+                        "outputs": 2,
+                        "format": candidate_image_path.suffix.lstrip("."),
+                        "seed": seed,
+                        "generator": "live-image-backend" if self.mode == "live" else "mock-svg",
+                        "round": round_index,
+                        "candidate_index": candidate_index,
+                    },
+                    "generation_spec": spec,
+                },
+                "grounding": grounding,
+                "tool_calls": tool_calls,
+                "final_generation_context": {"prompt": prompt},
+                "feedback": [],
+            },
+        }
+
     def _score_candidate(
         self,
         case: dict[str, Any],
@@ -146,18 +202,42 @@ class GenerationMixin:
         checks = self._verification_checks(case, spec)
         if not checks:
             return {"score": 1.0, "passed": True, "failed_checks": [], "critique": [], "cost_usd": 0.0}
+        if candidate["metadata"].get("error"):
+            failed_checks = [str(check["value"]) for check in checks]
+            critique = [f"Generation error: {candidate['metadata']['error']}"]
+            critique.extend(f"Add exact visible text: {value}" for value in failed_checks)
+            return {
+                "score": 0.0,
+                "passed": False,
+                "failed_checks": dedupe_strings(failed_checks),
+                "critique": dedupe_strings(critique),
+                "cost_usd": 0.0,
+            }
 
         verifier_case = {
             "id": str(case.get("id") or case.get("run_id") or "unknown-case"),
             "prompt": case["prompt"],
         }
         before_cost = float(getattr(self.verifier, "total_cost_usd", 0.0) or 0.0)
-        verdicts = self.verifier.evaluate_image_checks(
-            verifier_case,
-            {"image_path": str(candidate["image_path"])},
-            candidate["trace"],
-            checks,
-        )
+        try:
+            verdicts = self.verifier.evaluate_image_checks(
+                verifier_case,
+                {"image_path": str(candidate["image_path"])},
+                candidate["trace"],
+                checks,
+            )
+        except Exception as exc:
+            after_cost = float(getattr(self.verifier, "total_cost_usd", 0.0) or 0.0)
+            failed_checks = [str(check["value"]) for check in checks]
+            critique = [f"Verification error: {exc}"]
+            critique.extend(f"Add exact visible text: {value}" for value in failed_checks)
+            return {
+                "score": 0.0,
+                "passed": False,
+                "failed_checks": dedupe_strings(failed_checks),
+                "critique": dedupe_strings(critique),
+                "cost_usd": max(0.0, after_cost - before_cost),
+            }
         after_cost = float(getattr(self.verifier, "total_cost_usd", 0.0) or 0.0)
 
         passed = 0

@@ -82,18 +82,33 @@ class ImageAgent(GroundingMixin, GenerationMixin, RenderingMixin):
             candidates: list[dict[str, Any]] = []
             for candidate_index, candidate_seed in enumerate(self._candidate_seeds(seed, round_index)):
                 variant = self._candidate_variant(round_index, candidate_index)
-                candidate = self._generate_candidate(
-                    case=case,
-                    output_dir=output_dir,
-                    run_id=run_id,
-                    seed=candidate_seed,
-                    round_index=round_index,
-                    candidate_index=candidate_index,
-                    spec=working_spec,
-                    variant=variant,
-                    grounding=grounding,
-                    tool_calls=tool_calls,
-                )
+                try:
+                    candidate = self._generate_candidate(
+                        case=case,
+                        output_dir=output_dir,
+                        run_id=run_id,
+                        seed=candidate_seed,
+                        round_index=round_index,
+                        candidate_index=candidate_index,
+                        spec=working_spec,
+                        variant=variant,
+                        grounding=grounding,
+                        tool_calls=tool_calls,
+                    )
+                except Exception as exc:
+                    candidate = self._failed_candidate(
+                        case=case,
+                        output_dir=output_dir,
+                        run_id=run_id,
+                        seed=candidate_seed,
+                        round_index=round_index,
+                        candidate_index=candidate_index,
+                        spec=working_spec,
+                        variant=variant,
+                        grounding=grounding,
+                        tool_calls=tool_calls,
+                        error=exc,
+                    )
                 total_generation_cost += float(candidate["metadata"].get("cost_usd", 0.0) or 0.0)
                 verification = self._score_candidate(case, output_dir, candidate, working_spec)
                 total_verifier_cost += float(verification["cost_usd"])
@@ -142,6 +157,9 @@ class ImageAgent(GroundingMixin, GenerationMixin, RenderingMixin):
 
         if selected_candidate is None:
             raise RuntimeError("agent did not produce any candidate")
+        if not Path(selected_candidate["image_path"]).exists():
+            error = selected_candidate["metadata"].get("error", "all candidate generations failed")
+            raise RuntimeError(f"agent did not produce a usable image: {error}")
 
         feedback_entries[-1]["selected"] = True
         for attempt in feedback_attempts:
