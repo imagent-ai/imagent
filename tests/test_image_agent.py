@@ -426,6 +426,24 @@ def test_image_agent_reason_normalizes_parenthesized_arithmetic(
     assert result["display"] == "(8 + 4) / 3 = 4"
 
 
+def test_image_agent_reason_handles_divide_by_zero_gracefully(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    agent = _setup_agent(monkeypatch, tmp_path)
+
+    result = agent._reason(
+        {
+            "capability": "reason",
+            "prompt": "Create a card that shows the result of 1 / 0.",
+            "allowed_tools": ["reason"],
+        }
+    )[0]
+
+    assert result["answer"] == ""
+    assert "Could not evaluate 1 / 0" == result["display"]
+    assert "float division by zero" in result["rationale"]
+
+
 def test_image_agent_mock_svg_renders_spec_not_raw_prompt(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
