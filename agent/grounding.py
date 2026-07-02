@@ -142,7 +142,19 @@ class GroundingMixin:
                     "display": "No arithmetic expression detected.",
                 }
             ]
-        value = self._evaluate_expression(expression)
+        try:
+            value = self._evaluate_expression(expression)
+        except (ValueError, ZeroDivisionError) as exc:
+            return [
+                {
+                    "type": "reasoning",
+                    "source": "local-arithmetic-parser",
+                    "expression": expression,
+                    "answer": "",
+                    "rationale": f"Could not evaluate {expression}: {exc}.",
+                    "display": f"Could not evaluate {expression}",
+                }
+            ]
         answer = format_number(value)
         return [
             {
