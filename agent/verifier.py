@@ -5,6 +5,7 @@ import html
 import json
 import mimetypes
 import os
+import re
 import urllib.error
 import urllib.request
 import xml.etree.ElementTree as ET
@@ -36,13 +37,21 @@ class MockTextVerifier:
         verdicts: dict[int, dict[str, Any]] = {}
         for index, check in enumerate(checks):
             value = str(check.get("value", ""))
-            passed = value in text
+            passed = self._contains_visible_text(text, value)
             verdicts[index] = {
                 "passed": passed,
                 "reason": "exact visible text matched" if passed else "exact visible text missing",
                 "provider": self.provider,
             }
         return verdicts
+
+    def _contains_visible_text(self, text: str, value: str) -> bool:
+        value = value.strip()
+        if not value:
+            return False
+        prefix = r"(?<![A-Za-z0-9_])" if value[0].isalnum() or value[0] == "_" else ""
+        suffix = r"(?![A-Za-z0-9_])" if value[-1].isalnum() or value[-1] == "_" else ""
+        return re.search(prefix + re.escape(value) + suffix, text) is not None
 
     def _read_text(self, image_path: Path) -> str:
         if not image_path.exists():

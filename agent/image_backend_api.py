@@ -125,7 +125,22 @@ def _output_extension(output_path: Path, media_type: str | None, configured_form
         if guessed:
             return guessed
     if configured_format:
-        return "." + str(configured_format).lstrip(".")
+        configured = str(configured_format).strip().lower().lstrip(".")
+        preferred = {
+            "image/jpeg": ".jpg",
+            "image/jpg": ".jpg",
+            "image/png": ".png",
+            "image/webp": ".webp",
+            "image/gif": ".gif",
+            "image/svg+xml": ".svg",
+        }.get(configured)
+        if preferred:
+            return preferred
+        if "/" in configured:
+            guessed = mimetypes.guess_extension(configured, strict=False)
+            if guessed:
+                return guessed
+        return "." + configured
     if output_path.suffix:
         return output_path.suffix
     return ".bin"

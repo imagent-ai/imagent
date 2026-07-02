@@ -169,7 +169,8 @@ class GroundingMixin:
 
     def _extract_expression(self, prompt: str) -> str | None:
         candidates: list[str] = []
-        for match in re.finditer(r"[0-9(][0-9()\s+\-*/.]*", prompt):
+        number = r"(?:\d+(?:\.\d*)?|\.\d+)"
+        for match in re.finditer(rf"(?<![A-Za-z0-9_.])(?:{number}|\()[0-9()\s+\-*/.]*", prompt):
             cleaned = match.group(0).strip().rstrip(".")
             if not cleaned or not any(character.isdigit() for character in cleaned):
                 continue
@@ -198,10 +199,12 @@ class GroundingMixin:
         prompt_keywords = keywords(str(case["prompt"]))
         for snapshot_index, snapshot in enumerate(case.get("search_snapshots", [])):
             path = self._resolve_case_path(snapshot)
-            data = json.loads(path.read_text(encoding="utf-8"))
+            data = self._read_case_json(path, "search snapshot")
             title = str(data.get("title", ""))
             title_keywords = keywords(title)
-            for fact_index, fact in enumerate(data.get("facts", [])):
+            facts = data.get("facts", [])
+            facts = facts if isinstance(facts, list) else []
+            for fact_index, fact in enumerate(facts):
                 fact_text = str(fact)
                 fact_keywords = keywords(fact_text)
                 score = (10 * len(prompt_keywords & fact_keywords)) + (5 * len(title_keywords & fact_keywords))
@@ -226,10 +229,9 @@ class GroundingMixin:
             path = self._resolve_case_path(asset)
             suffix = path.suffix.lower()
             if suffix == ".json":
-                data = json.loads(path.read_text(encoding="utf-8"))
-                if isinstance(data, dict):
-                    entries.append(self._json_asset_entry(path, data))
-                    continue
+                data = self._read_case_json(path, "asset")
+                entries.append(self._json_asset_entry(path, data))
+                continue
             text = path.read_text(encoding="utf-8", errors="ignore")
             lines = [line.strip(" #-") for line in text.splitlines() if line.strip()]
             title = lines[0] if lines else path.stem.replace("_", " ").title()
@@ -326,10 +328,29 @@ class GroundingMixin:
         ]
 
     def _resolve_case_path(self, value: Any) -> Path:
-        path = Path(str(value)).expanduser()
-        if path.is_absolute():
-            return path
-        return self.workdir / path
+        raw_path = Path(str(value)).expanduser()
+        candidate = raw_path if raw_path.is_absolute() else self.workdir / raw_path
+        try:
+            resolved = candidate.resolve(strict=True)
+        except FileNotFoundError as exc:
+            raise FileNotFoundError(f"case path does not exist: {raw_path}") from exc
+        root = self.workdir.resolve(strict=False)
+        try:
+            resolved.relative_to(root)
+        except ValueError as exc:
+            raise ValueError(f"case path escapes workdir: {raw_path}") from exc
+        if not resolved.is_file():
+            raise ValueError(f"case path must be a file: {raw_path}")
+        return resolved
+
+    def _read_case_json(self, path: Path, label: str) -> dict[str, Any]:
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError as exc:
+            raise ValueError(f"{label} must be valid JSON: {path}") from exc
+        if not isinstance(data, dict):
+            raise ValueError(f"{label} JSON must be an object: {path}")
+        return data
 
     def _layout_from_prompt(self, prompt: str, default: str = "card") -> str:
         lowered = prompt.lower()
@@ -340,21 +361,46 @@ class GroundingMixin:
         return default or "card"
 
     def _title_from_prompt(self, prompt: str) -> str | None:
-        patterns = (
-            r"titled ([A-Za-z0-9][A-Za-z0-9 \-]+?)(?: with| using|\.|$)",
-            r"about ([A-Za-z0-9][A-Za-z0-9 \-]+?)(?: using| with|\.|$)",
-        )
-        for pattern in patterns:
-            match = re.search(pattern, prompt, flags=re.IGNORECASE)
-            if match:
-                return match.group(1).strip()
+        for keyword in ("titled", "about"):
+            title = self._phrase_after_keyword(prompt, keyword)
+            if title:
+                return title
         return None
 
+    def _phrase_after_keyword(self, prompt: str, keyword: str) -> str | None:
+        match = re.search(rf"\b{re.escape(keyword)}\s+(.+)", prompt, flags=re.IGNORECASE)
+        if not match:
+            return None
+        tail = match.group(1).strip()
+        if not tail:
+            return None
+        if tail[0] in {"'", '"'}:
+            end = tail.find(tail[0], 1)
+            if end > 1:
+                value = tail[1:end].strip()
+                return value if any(character.isalnum() for character in value) else None
+        value = re.split(
+            r"\s+(?:with|using|from|based on)\b",
+            tail,
+            maxsplit=1,
+            flags=re.IGNORECASE,
+        )[0]
+        value = value.strip().strip("'\"").rstrip(".!?").strip()
+        if not any(character.isalnum() for character in value):
+            return None
+        return value
+
     def _section_labels(self, prompt: str, fallback: list[str] | None = None) -> list[str]:
-        match = re.search(r"sections? ([A-Za-z0-9 ,\-]+?)(?:\.|$)", prompt, flags=re.IGNORECASE)
+        match = re.search(r"\bsections?\s+(.+)", prompt, flags=re.IGNORECASE)
         if not match:
             return fallback or ["Plan", "Ground", "Verify"]
-        raw = match.group(1)
-        parts = [part.strip(" .") for part in raw.split(",")]
+        raw = re.split(
+            r"\s+(?:with|using|from|based on)\b|[.!?]",
+            match.group(1),
+            maxsplit=1,
+            flags=re.IGNORECASE,
+        )[0]
+        raw = re.sub(r"\band\b", ",", raw, flags=re.IGNORECASE)
+        parts = [part.strip(" .-") for part in re.split(r"[,;/|]+", raw)]
         sections = [part for part in parts if part]
         return sections or fallback or ["Plan", "Ground", "Verify"]

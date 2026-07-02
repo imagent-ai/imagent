@@ -3,6 +3,7 @@ from __future__ import annotations
 import ast
 import re
 from pathlib import Path
+from typing import Any
 
 try:
     from .constants import STOPWORDS
@@ -35,6 +36,16 @@ def keywords(text: str) -> set[str]:
 
 def relative_to_output(path: Path, output_dir: Path) -> str:
     return str(path.resolve().relative_to(output_dir.resolve()))
+
+
+def validate_run_id(value: Any) -> str:
+    run_id = str(value).strip()
+    if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]*", run_id):
+        raise ValueError(
+            "run_id must be a non-empty filename-safe slug containing only "
+            "letters, digits, dots, underscores, and hyphens"
+        )
+    return run_id
 
 
 def format_number(value: float) -> str:
