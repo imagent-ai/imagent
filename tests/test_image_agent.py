@@ -505,6 +505,70 @@ def test_image_agent_honors_configured_feedback_rounds(
     assert trace["feedback_attempts"][-1]["round"] == 3
 
 
+def test_image_agent_continues_after_generation_error(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    agent = _setup_agent(monkeypatch, tmp_path, max_feedback_rounds=0)
+    original_generate_candidate = agent._generate_candidate
+    calls = {"count": 0}
+
+    def flaky_generate_candidate(*args, **kwargs):
+        calls["count"] += 1
+        if calls["count"] == 1:
+            raise RuntimeError("backend timeout")
+        return original_generate_candidate(*args, **kwargs)
+
+    monkeypatch.setattr(agent, "_generate_candidate", flaky_generate_candidate)
+
+    output = agent.generate(_feedback_case(), tmp_path)
+    trace = json.loads(Path(output["trace_path"]).read_text(encoding="utf-8"))
+
+    assert Path(output["image_path"]).exists()
+    assert trace["feedback_attempts"][0]["score"] == 0.0
+    assert "Generation error: backend timeout" in trace["feedback_attempts"][0]["critique"][0]
+    assert trace["feedback_attempts"][1]["selected"] is True
+
+
+def test_image_agent_continues_after_verification_error(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    agent = _setup_agent(monkeypatch, tmp_path, max_feedback_rounds=0)
+    calls = {"count": 0}
+
+    def flaky_verify(case, output, trace, checks):
+        calls["count"] += 1
+        if calls["count"] == 1:
+            raise RuntimeError("judge timeout")
+        return {
+            index: {"passed": True, "reason": "ok", "provider": "mock_text"}
+            for index, _check in enumerate(checks)
+        }
+
+    agent.verifier.evaluate_image_checks = flaky_verify
+
+    output = agent.generate(_feedback_case(), tmp_path)
+    trace = json.loads(Path(output["trace_path"]).read_text(encoding="utf-8"))
+
+    assert Path(output["image_path"]).exists()
+    assert trace["feedback_attempts"][0]["score"] == 0.0
+    assert "Verification error: judge timeout" in trace["feedback_attempts"][0]["critique"][0]
+    assert trace["feedback_attempts"][1]["selected"] is True
+
+
+def test_image_agent_raises_when_all_candidates_fail(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    agent = _setup_agent(monkeypatch, tmp_path, max_feedback_rounds=0)
+
+    def always_fail(*args, **kwargs):
+        raise RuntimeError("backend timeout")
+
+    monkeypatch.setattr(agent, "_generate_candidate", always_fail)
+
+    with pytest.raises(RuntimeError, match="agent did not produce a usable image: backend timeout"):
+        agent.generate(_feedback_case(), tmp_path)
+
+
 def test_build_image_verifier_normalizes_live_mode(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
