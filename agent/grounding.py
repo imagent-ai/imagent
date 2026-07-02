@@ -210,10 +210,7 @@ class GroundingMixin:
                 )
 
         ranked.sort(key=lambda item: (-int(item["score"]), int(item["snapshot_index"]), int(item["fact_index"])))
-        selected = [item for item in ranked if int(item["score"]) > 0][:3]
-        if not selected and ranked:
-            selected = ranked[:1]
-        return selected
+        return [item for item in ranked if int(item["score"]) > 0][:3]
 
     def _assets(self, case: dict[str, Any]) -> list[dict[str, Any]]:
         entries: list[dict[str, Any]] = []

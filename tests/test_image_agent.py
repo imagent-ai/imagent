@@ -311,6 +311,36 @@ def test_image_agent_resolves_relative_search_snapshots_from_workdir(
     assert results[0]["source"] == str(snapshot)
 
 
+def test_image_agent_search_ignores_unrelated_snapshots(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    snapshot = tmp_path / "snapshot.json"
+    snapshot.write_text(
+        json.dumps(
+            {
+                "title": "Birds",
+                "facts": [
+                    "Migration peaks in spring.",
+                    "Nests are built from twigs.",
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    agent = _setup_agent(monkeypatch, tmp_path)
+
+    results = agent._search(
+        {
+            "capability": "search",
+            "prompt": "Create a release dashboard for server latency.",
+            "allowed_tools": ["search"],
+            "search_snapshots": [str(snapshot)],
+        }
+    )
+
+    assert results == []
+
+
 def test_image_agent_memory_maps_visual_constraints(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
