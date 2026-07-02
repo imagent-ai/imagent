@@ -14,7 +14,6 @@
 
 - [ ] Unit tests (`python -m pytest`)
 - [ ] Manual testing
-- [ ] Benchmark run
 - [ ] CI passes
 
 ## Notes

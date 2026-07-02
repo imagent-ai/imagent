@@ -9,5 +9,5 @@ supports:
   memory: true
   feedback: true
 runtime:
-  network: false
+  network: true
   gpu: false
