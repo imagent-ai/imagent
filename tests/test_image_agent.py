@@ -8,7 +8,7 @@ import pytest
 
 import agent.agent as agent_module
 from agent import ImageAgent
-from agent.image_backend_api import ImageBackendClient
+from agent.image_backend_api import ImageBackendClient, _output_extension
 from agent.verifier import (
     ImageVerificationError,
     MockTextVerifier,
@@ -97,6 +97,7 @@ def test_image_agent_mock_generate_writes_svg_and_trace(
     assert image_path.exists()
     assert trace_path.exists()
     assert output["metadata"]["provider"] == "mock"
+    assert output["metadata"]["image_path"] == output["image_path"]
     assert trace["planning"]["generation_spec"]["title"] == "Context Gap Toolkit"
     assert trace["planning"]["generation_plan"]["selected_candidate_index"] == 0
     assert any(call["tool"] == "planner" for call in trace["tool_calls"])
@@ -136,6 +137,21 @@ def test_mock_text_verifier_ignores_non_visible_svg_attributes(tmp_path: Path) -
     assert verdicts[0]["passed"] is False
 
 
+def test_mock_text_verifier_rejects_embedded_substring_matches(tmp_path: Path) -> None:
+    image_path = tmp_path / "card.svg"
+    image_path.write_text("<svg><text>BYPASS</text></svg>", encoding="utf-8")
+    verifier = MockTextVerifier({}, tmp_path)
+
+    verdicts = verifier.evaluate_image_checks(
+        {"id": "case-1"},
+        {"image_path": str(image_path)},
+        {},
+        [{"type": "image_contains", "value": "PASS"}],
+    )
+
+    assert verdicts[0]["passed"] is False
+
+
 def test_image_agent_builds_structured_spec_for_plan_case(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
@@ -152,6 +168,23 @@ def test_image_agent_builds_structured_spec_for_plan_case(
     assert spec["title"] == "Context Gap Toolkit"
     assert spec["layout"] == "three_panel"
     assert spec["must_include"][:4] == ["Context Gap Toolkit", "Plan", "Ground", "Verify"]
+    assert spec["visual_constraints"]["sections"] == ["Plan", "Ground", "Verify"]
+
+
+def test_image_agent_parses_common_title_and_section_shapes(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    agent = _setup_agent(monkeypatch, tmp_path)
+    case = {
+        "capability": "plan",
+        "prompt": 'Create a three-panel infographic titled "Q3: Launch, Risks" with sections Plan, Ground, and Verify.',
+        "allowed_tools": ["plan"],
+    }
+
+    grounding = agent._build_grounding(case)
+    spec = agent._build_generation_spec(case, grounding)
+
+    assert spec["title"] == "Q3: Launch, Risks"
     assert spec["visual_constraints"]["sections"] == ["Plan", "Ground", "Verify"]
 
 
@@ -264,6 +297,30 @@ def test_image_agent_resolves_relative_asset_paths_from_workdir(
     assert grounding["asset"][0]["source"] == str(asset)
 
 
+def test_image_agent_rejects_asset_paths_outside_workdir(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    workdir = tmp_path / "workspace"
+    workdir.mkdir()
+    outside = tmp_path / "secret.txt"
+    outside.write_text("SECRET\n", encoding="utf-8")
+    agent = _setup_agent(monkeypatch, workdir)
+
+    with pytest.raises(ValueError, match="escapes workdir"):
+        agent._assets({"assets": ["../secret.txt"]})
+
+
+def test_image_agent_rejects_malformed_json_asset(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    asset = tmp_path / "bad.json"
+    asset.write_text("[1, 2, 3]", encoding="utf-8")
+    agent = _setup_agent(monkeypatch, tmp_path)
+
+    with pytest.raises(ValueError, match="asset JSON must be an object"):
+        agent._assets({"assets": ["bad.json"]})
+
+
 def test_image_agent_search_ranks_top_three_facts(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
@@ -329,6 +386,26 @@ def test_image_agent_resolves_relative_search_snapshots_from_workdir(
 
     assert len(results) == 1
     assert results[0]["source"] == str(snapshot)
+
+
+def test_image_agent_rejects_search_snapshots_outside_workdir(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    workdir = tmp_path / "workspace"
+    workdir.mkdir()
+    outside = tmp_path / "snapshot.json"
+    outside.write_text(json.dumps({"title": "Private", "facts": ["secret"]}), encoding="utf-8")
+    agent = _setup_agent(monkeypatch, workdir)
+
+    with pytest.raises(ValueError, match="escapes workdir"):
+        agent._search(
+            {
+                "capability": "search",
+                "prompt": "Create a private card.",
+                "allowed_tools": ["search"],
+                "search_snapshots": ["../snapshot.json"],
+            }
+        )
 
 
 def test_image_agent_search_ignores_unrelated_snapshots(
@@ -424,6 +501,23 @@ def test_image_agent_reason_normalizes_parenthesized_arithmetic(
     assert result["source"] == "local-arithmetic-parser"
     assert result["answer"] == "4"
     assert result["display"] == "(8 + 4) / 3 = 4"
+
+
+def test_image_agent_reason_handles_leading_decimal_arithmetic(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    agent = _setup_agent(monkeypatch, tmp_path)
+
+    result = agent._reason(
+        {
+            "capability": "reason",
+            "prompt": "Create a card that shows the correct result of .5 + .25.",
+            "allowed_tools": ["reason"],
+        }
+    )[0]
+
+    assert result["answer"] == "0.75"
+    assert result["display"] == ".5 + .25 = 0.75"
 
 
 def test_image_agent_reason_handles_divide_by_zero_gracefully(
@@ -532,6 +626,24 @@ def test_image_agent_selects_second_candidate_without_revision(
     assert trace["feedback"][0]["selected"] is True
     assert len(trace["feedback_attempts"]) == 2
     assert trace["feedback_attempts"][1]["selected"] is True
+
+
+def test_image_agent_rejects_unsafe_run_id(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    agent = _setup_agent(monkeypatch, tmp_path)
+
+    with pytest.raises(ValueError, match="run_id"):
+        agent.generate(
+            {
+                "run_id": "bad/path",
+                "capability": "plan",
+                "prompt": "Create a card.",
+                "seed": 1001,
+                "allowed_tools": [],
+            },
+            tmp_path,
+        )
 
 
 def test_image_agent_revises_after_round_zero_failure(
@@ -726,6 +838,10 @@ def test_image_backend_client_uses_returned_media_type_extension(
     assert metadata["media_type"] == "image/jpeg"
     assert metadata["image_path"].endswith(".jpg")
     assert (tmp_path / "image.jpg").read_bytes() == jpeg_bytes
+
+
+def test_image_backend_configured_mime_type_maps_to_file_extension() -> None:
+    assert _output_extension(Path("image"), None, "image/png") == ".png"
 
 
 def test_image_agent_records_actual_live_image_format(
