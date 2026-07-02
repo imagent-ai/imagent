@@ -6,8 +6,10 @@ import mimetypes
 import os
 import urllib.error
 import urllib.request
+from email.message import Message
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlparse
 
 
 class ImageBackendError(RuntimeError):
@@ -17,14 +19,16 @@ class ImageBackendError(RuntimeError):
 class ImageBackendClient:
     """Generates images through the configured live image backend.
 
-    By default this client targets OpenRouter's ``/api/v1/images`` endpoint. The
-    backend returns base64-encoded image bytes in ``data[].b64_json`` and reports
-    spend in ``usage.cost``, which the caller records as ``cost_usd``.
+    By default this client targets OpenRouter's ``/api/v1/images`` endpoint with
+    the low-cost GPT Image mini model. The backend returns base64-encoded image
+    bytes in ``data[].b64_json`` and reports spend in ``usage.cost``, which the
+    caller records as ``cost_usd``.
     """
 
     def __init__(self, config: dict[str, Any]) -> None:
         self.config = config
-        self.model = str(config.get("model", "openai/gpt-image-1"))
+        self.provider = str(config.get("provider", "openrouter"))
+        self.model = str(config.get("model", "openai/gpt-image-1-mini"))
         self.api_key_env = str(config.get("api_key_env", "OPENROUTER_API_KEY"))
         self.api_key = os.environ.get(self.api_key_env)
         if not self.api_key:
@@ -32,7 +36,10 @@ class ImageBackendClient:
         self.endpoint = str(config.get("endpoint", "https://openrouter.ai/api/v1/images"))
         self.timeout_seconds = int(config.get("timeout_seconds", 300))
         self.size = str(config.get("size", "")) or None
+        self.quality = str(config.get("quality", "")) or None
         self.output_format = str(config.get("output_format", "png")) or None
+        self.send_seed = bool(config.get("send_seed", False))
+        self.send_output_format = bool(config.get("send_output_format", False))
         self.referer = config.get("referer")
         self.title = config.get("title")
 
@@ -40,25 +47,27 @@ class ImageBackendClient:
         payload: dict[str, Any] = {"model": self.model, "prompt": prompt}
         if self.size:
             payload["size"] = self.size
-        if self.output_format:
+        if self.quality:
+            payload["quality"] = self.quality
+        if self.output_format and self.send_output_format:
             payload["output_format"] = self.output_format
-        if seed is not None:
+        if seed is not None and self.send_seed:
             payload["seed"] = int(seed)
         extra = self.config.get("parameters", {})
         if isinstance(extra, dict):
             payload.update(extra)
 
         response = self._post_json(payload)
-        encoded, media_type = self._extract_image(response)
+        image_bytes, media_type = self._extract_image_bytes(response)
         output_path = _resolved_output_path(output_path, media_type, self.output_format)
         output_path.parent.mkdir(parents=True, exist_ok=True)
-        output_path.write_bytes(base64.b64decode(encoded))
+        output_path.write_bytes(image_bytes)
 
         usage = response.get("usage", {})
         usage = usage if isinstance(usage, dict) else {}
         return {
             "image_path": str(output_path),
-            "provider": "openrouter",
+            "provider": self.provider,
             "model": self.model,
             "endpoint": self.endpoint,
             "usage": usage,
@@ -102,6 +111,32 @@ class ImageBackendClient:
                     return str(item["b64_json"]), item.get("media_type")
         raise ImageBackendError("image backend response did not include b64_json data")
 
+    def _extract_image_bytes(self, response: dict[str, Any]) -> tuple[bytes, str | None]:
+        data = response.get("data")
+        if isinstance(data, list):
+            for item in data:
+                if isinstance(item, dict) and item.get("b64_json"):
+                    return base64.b64decode(str(item["b64_json"])), item.get("media_type")
+                if isinstance(item, dict) and item.get("url"):
+                    return self._download_image(str(item["url"]))
+        raise ImageBackendError("image backend response did not include b64_json data or url")
+
+    def _download_image(self, url: str) -> tuple[bytes, str | None]:
+        request = urllib.request.Request(url, headers={"User-Agent": "imagent/0.1"})
+        try:
+            with urllib.request.urlopen(request, timeout=self.timeout_seconds) as response:
+                payload = response.read()
+                media_type = _response_media_type(response.headers) or mimetypes.guess_type(
+                    urlparse(url).path,
+                    strict=False,
+                )[0]
+                return payload, media_type
+        except urllib.error.HTTPError as exc:
+            body = exc.read().decode("utf-8", errors="replace")
+            raise ImageBackendError(f"image download HTTP {exc.code}: {body}") from exc
+        except urllib.error.URLError as exc:
+            raise ImageBackendError(f"image download failed: {exc}") from exc
+
 
 def _resolved_output_path(output_path: Path, media_type: str | None, configured_format: str | None) -> Path:
     extension = _output_extension(output_path, media_type, configured_format)
@@ -144,3 +179,10 @@ def _output_extension(output_path: Path, media_type: str | None, configured_form
     if output_path.suffix:
         return output_path.suffix
     return ".bin"
+
+
+def _response_media_type(headers: Message) -> str | None:
+    content_type = headers.get("Content-Type")
+    if not content_type:
+        return None
+    return content_type.split(";", 1)[0].strip() or None

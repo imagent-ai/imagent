@@ -29,6 +29,7 @@ class ImageAgent(GroundingMixin, GenerationMixin, RenderingMixin):
         self.workdir = Path(workdir).expanduser().resolve()
         runtime = config.get("runtime", {})
         self.max_feedback_rounds = max(0, int(runtime.get("max_feedback_rounds", 1)))
+        self.candidates_per_round = max(1, int(runtime.get("candidates_per_round", 2)))
         image_config = config.get("agent", {}).get("image_backend", {})
         mode = str(image_config.get("mode", "mock")).strip().lower()
         if mode not in {"mock", "live"}:
