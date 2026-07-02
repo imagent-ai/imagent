@@ -6,14 +6,14 @@ from pathlib import Path
 from typing import Any
 
 try:
-    from .common import relative_to_output
+    from .common import relative_to_output, validate_run_id
     from .generation import GenerationMixin
     from .grounding import GroundingMixin
     from .image_backend_api import ImageBackendClient
     from .rendering import RenderingMixin
     from .verifier import build_image_verifier
 except ImportError:  # pragma: no cover - manifest loader imports this module outside a package
-    from common import relative_to_output
+    from common import relative_to_output, validate_run_id
     from generation import GenerationMixin
     from grounding import GroundingMixin
     from image_backend_api import ImageBackendClient
@@ -40,13 +40,13 @@ class ImageAgent(GroundingMixin, GenerationMixin, RenderingMixin):
 
     def generate(self, case: dict[str, Any], output_dir: Path) -> dict[str, Any]:
         started = time.perf_counter()
+        run_id = validate_run_id(case["run_id"])
         output_dir = Path(output_dir)
         images_dir = output_dir / "images"
         traces_dir = output_dir / "traces"
         images_dir.mkdir(parents=True, exist_ok=True)
         traces_dir.mkdir(parents=True, exist_ok=True)
 
-        run_id = case["run_id"]
         seed = int(case.get("seed", 0))
         grounding_bundle = self._build_grounding_bundle(case)
         grounding = grounding_bundle.grounding
@@ -189,6 +189,7 @@ class ImageAgent(GroundingMixin, GenerationMixin, RenderingMixin):
         self._write_json(final_trace_path, trace)
 
         selected_metadata = dict(selected_candidate["metadata"])
+        selected_metadata["image_path"] = str(final_image_path)
         selected_metadata["cost_usd"] = round(total_generation_cost + total_verifier_cost, 6)
         selected_metadata["generation_cost_usd"] = round(total_generation_cost, 6)
         selected_metadata["internal_judge_cost_usd"] = round(total_verifier_cost, 6)
