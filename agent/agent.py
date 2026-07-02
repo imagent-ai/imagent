@@ -26,7 +26,7 @@ class ImageAgent(GroundingMixin, GenerationMixin, RenderingMixin):
 
     def setup(self, config: dict[str, Any], workdir: Path) -> None:
         self.config = config
-        self.workdir = Path(workdir)
+        self.workdir = Path(workdir).expanduser().resolve()
         runtime = config.get("runtime", {})
         self.max_feedback_rounds = int(runtime.get("max_feedback_rounds", 1))
         image_config = config.get("agent", {}).get("image_backend", {})

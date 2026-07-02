@@ -189,7 +189,7 @@ class GroundingMixin:
         ranked: list[dict[str, Any]] = []
         prompt_keywords = keywords(str(case["prompt"]))
         for snapshot_index, snapshot in enumerate(case.get("search_snapshots", [])):
-            path = Path(snapshot)
+            path = self._resolve_case_path(snapshot)
             data = json.loads(path.read_text(encoding="utf-8"))
             title = str(data.get("title", ""))
             title_keywords = keywords(title)
@@ -218,7 +218,7 @@ class GroundingMixin:
     def _assets(self, case: dict[str, Any]) -> list[dict[str, Any]]:
         entries: list[dict[str, Any]] = []
         for asset in case.get("assets", []) or []:
-            path = Path(asset)
+            path = self._resolve_case_path(asset)
             suffix = path.suffix.lower()
             if suffix == ".json":
                 data = json.loads(path.read_text(encoding="utf-8"))
@@ -319,6 +319,12 @@ class GroundingMixin:
                 "unmapped": unmapped,
             }
         ]
+
+    def _resolve_case_path(self, value: Any) -> Path:
+        path = Path(str(value)).expanduser()
+        if path.is_absolute():
+            return path
+        return self.workdir / path
 
     def _layout_from_prompt(self, prompt: str, default: str = "card") -> str:
         lowered = prompt.lower()
