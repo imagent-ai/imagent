@@ -95,18 +95,22 @@ class BaseImageAgent:
 
     def _read_search_facts(self, values: Any, prompt: str) -> list[str]:
         prompt_words = set(re.findall(r"[a-z0-9]+", prompt.lower()))
-        facts: list[str] = []
+        ranked: dict[str, int] = {}
         for value in values or []:
             path = self._case_path(value)
             if path.suffix.lower() != ".json":
                 continue
             data = json.loads(path.read_text(encoding="utf-8"))
             for fact in data.get("facts", []) if isinstance(data, dict) else []:
-                text = str(fact)
+                text = str(fact).strip()
+                if not text:
+                    continue
                 fact_words = set(re.findall(r"[a-z0-9]+", text.lower()))
-                if prompt_words & fact_words:
-                    facts.append(text)
-        return _dedupe(facts)
+                overlap = len(prompt_words & fact_words)
+                if overlap == 0:
+                    continue
+                ranked[text] = max(ranked.get(text, 0), overlap)
+        return sorted(ranked, key=lambda text: (-ranked[text], -len(text), text.lower()))
 
     def _case_path(self, value: Any) -> Path:
         path = Path(str(value)).expanduser()
