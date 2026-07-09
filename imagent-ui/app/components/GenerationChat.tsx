@@ -410,6 +410,10 @@ export function GenerationChat() {
   const latestAgentMessage = [...activeMessages].reverse().find((message) => message.role === "agent");
   const latestUserMessage = [...activeMessages].reverse().find((message) => message.role === "user");
   const runtimeState = !runtimeStatus && !runtimeError ? "checking" : runtimeReady ? "ready" : "blocked";
+  const previewHasImage = Boolean(latestAgentMessage?.imageUrl);
+  const previewFailed = !isGenerating && !previewHasImage && Boolean(latestAgentMessage?.error);
+  const previewBadgeLabel = isGenerating ? "Running" : previewHasImage ? "Ready" : previewFailed ? "Failed" : "Waiting";
+  const previewBadgeClass = `generation-preview-badge${isGenerating ? " running" : previewFailed ? " failed" : ""}`;
   const latestMetaItems: string[] = [];
 
   if (latestAgentMessage?.agentId) {
@@ -723,8 +727,8 @@ export function GenerationChat() {
               <span>Preview</span>
               <strong>Latest Agent Output</strong>
             </div>
-            <span className={isGenerating ? "generation-preview-badge running" : "generation-preview-badge"}>
-              {isGenerating ? "Running" : latestAgentMessage?.imageUrl ? "Ready" : "Waiting"}
+            <span className={previewBadgeClass}>
+              {previewBadgeLabel}
             </span>
           </div>
 

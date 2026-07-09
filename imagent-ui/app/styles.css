@@ -8084,6 +8084,11 @@ body .generation-preview-badge.running {
   color: var(--generation-green);
 }
 
+body .generation-preview-badge.failed {
+  border-color: rgba(255, 101, 118, 0.4);
+  color: #ff9ea9;
+}
+
 body .generation-preview-surface {
   background:
     radial-gradient(circle at 50% 0%, rgba(0, 226, 251, 0.1), transparent 44%),
