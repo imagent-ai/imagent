@@ -12,6 +12,7 @@ import {
   Loader2,
   MessageSquarePlus,
   RadioTower,
+  RefreshCw,
   Send,
   Settings,
   Sparkles,
@@ -179,6 +180,7 @@ export function GenerationChat() {
   const [openDropdown, setOpenDropdown] = useState<"composer-model" | "composer-quality" | null>(null);
   const [prompt, setPrompt] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isCheckingRuntime, setIsCheckingRuntime] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
   const committedSettingsRef = useRef(settings);
   const settingsButtonRef = useRef<HTMLButtonElement | null>(null);
@@ -187,6 +189,7 @@ export function GenerationChat() {
   const settingsTriggerRef = useRef<HTMLElement | null>(null);
 
   async function loadRuntimeStatus() {
+    setIsCheckingRuntime(true);
     try {
       const response = await fetch("/api/playground/status", { cache: "no-store" });
       const data = (await response.json()) as RuntimeStatusResponse;
@@ -195,6 +198,8 @@ export function GenerationChat() {
     } catch (error) {
       setRuntimeStatus(null);
       setRuntimeError(error instanceof Error ? error.message : "Failed to check the Imagent runtime.");
+    } finally {
+      setIsCheckingRuntime(false);
     }
   }
 
@@ -412,6 +417,9 @@ export function GenerationChat() {
   const latestUserMessage = [...activeMessages].reverse().find((message) => message.role === "user");
   const recentSessions = sessions.filter((session) => session.messages.length > 0).slice(0, 5);
   const runtimeState = !runtimeStatus && !runtimeError ? "checking" : runtimeReady ? "ready" : "blocked";
+  const runtimeIssues = runtimeError
+    ? [runtimeError]
+    : (runtimeStatus?.issues || []).filter((issue) => typeof issue === "string" && issue.trim().length > 0);
   const latestMetaItems: string[] = [];
 
   if (latestAgentMessage?.agentId) {
@@ -627,6 +635,34 @@ export function GenerationChat() {
               Gittensor Powered
             </span>
           </div>
+          {runtimeState === "blocked" ? (
+            <div className="generation-runtime-alert" role="alert">
+              <span className="generation-runtime-alert-icon" aria-hidden="true">
+                <AlertCircle size={18} />
+              </span>
+              <div className="generation-runtime-alert-copy">
+                <strong>Runtime Blocked</strong>
+                {runtimeIssues.length > 0 ? (
+                  <ul>
+                    {runtimeIssues.map((issue) => (
+                      <li key={issue}>{issue}</li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p>The Imagent runtime is not ready, so generation stays disabled.</p>
+                )}
+              </div>
+              <button
+                className="generation-runtime-retry"
+                type="button"
+                onClick={() => void loadRuntimeStatus()}
+                disabled={isCheckingRuntime}
+              >
+                {isCheckingRuntime ? <Loader2 className="spin" size={15} /> : <RefreshCw size={15} />}
+                {isCheckingRuntime ? "Checking" : "Retry Check"}
+              </button>
+            </div>
+          ) : null}
         </div>
         <button className="generation-settings-button" type="button" onClick={openSettings} ref={settingsButtonRef}>
           <Settings size={17} />
@@ -702,7 +738,13 @@ export function GenerationChat() {
                     </button>
                   )}
                 </div>
-                <button className="composer-send-button" type="submit" disabled={!canSubmit} aria-label="Generate image">
+                <button
+                  className="composer-send-button"
+                  type="submit"
+                  disabled={!canSubmit}
+                  aria-label="Generate image"
+                  title={runtimeState === "blocked" ? "Generation stays disabled while the Imagent runtime is blocked." : undefined}
+                >
                   {isGenerating ? (
                     <>
                       <Loader2 className="spin" size={16} />
