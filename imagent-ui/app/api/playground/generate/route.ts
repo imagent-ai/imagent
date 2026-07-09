@@ -140,7 +140,7 @@ export async function POST(request: Request) {
       model: agentResult.metadata?.model || model,
       provider: agentResult.metadata?.provider || "imagent",
       costUsd: Number(agentResult.metadata?.cost_usd || 0),
-      latencyMs: Number(agentResult.metadata?.latency_ms || Math.round((performance.now() - started) * 1000) / 1000),
+      latencyMs: Number(agentResult.metadata?.latency_ms ?? Math.round(performance.now() - started)),
       agentId: agentResult.agent_id || agentResult.metadata?.agent_id || "image-agent",
       capability: agentResult.capability || "plan",
       candidateCount: Number(agentResult.candidate_count || agentResult.metadata?.candidate_count || 0),

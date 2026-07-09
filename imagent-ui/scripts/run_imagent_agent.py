@@ -106,12 +106,39 @@ def main() -> int:
         "metadata": result.get("metadata", {}),
         "agent_id": result.get("metadata", {}).get("agent_id"),
         "capability": capability,
-        "candidate_count": int(result.get("metadata", {}).get("candidate_count", 0) or 0),
-        "round_count": len(trace.get("feedback", [])),
+        "candidate_count": _candidate_count(result.get("metadata", {})),
+        "round_count": _round_count_from_trace(trace, result.get("metadata", {})),
         "selected_candidate_index": result.get("metadata", {}).get("selected_candidate_index"),
     }
     print(json.dumps(response))
     return 0
+
+
+def _candidate_count(metadata: dict[str, Any]) -> int:
+    raw = metadata.get("candidate_count")
+    try:
+        count = int(raw)
+    except (TypeError, ValueError):
+        count = 0
+    return count if count > 0 else 1
+
+
+def _round_count_from_trace(trace: dict[str, Any], metadata: dict[str, Any]) -> int:
+    feedback = trace.get("feedback")
+    if isinstance(feedback, list) and feedback:
+        return len(feedback)
+    revisions = trace.get("revisions")
+    if isinstance(revisions, list) and revisions:
+        return len(revisions)
+    for key in ("round_count", "feedback_rounds"):
+        raw = metadata.get(key)
+        try:
+            count = int(raw)
+        except (TypeError, ValueError):
+            continue
+        if count > 0:
+            return count
+    return 1
 
 
 def _capability(prompt: str) -> tuple[str, list[str]]:

@@ -1,5 +1,6 @@
 import { execFile } from "node:child_process";
 import { promises as fs } from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
 
@@ -34,7 +35,7 @@ export function resolvePlaygroundEnvironment() {
     allowServerKeyFallback: envFlagEnabled(process.env.IMAGENT_UI_ENABLE_SERVER_KEY_FALLBACK),
     configuredServerApiKey,
     outputRoot: path.join(process.cwd(), "data", "agent-runs"),
-    pythonBin: String(process.env.IMAGENT_PYTHON_BIN || "python3").trim() || "python3",
+    pythonBin: resolvePythonBin(),
     repositoryPath: String(process.env.IMAGENT_REPOSITORY_PATH || path.resolve(process.cwd(), "..", "imagent")).trim(),
     scriptPath: path.join(process.cwd(), "scripts", "run_imagent_agent.py")
   };
@@ -160,6 +161,14 @@ async function supportsPython(pythonBin: string) {
 
 function isSafeArtifactFileName(fileName: string) {
   return /^[A-Za-z0-9._-]+$/.test(fileName);
+}
+
+function resolvePythonBin() {
+  const configured = String(process.env.IMAGENT_PYTHON_BIN || "").trim();
+  if (configured) {
+    return configured;
+  }
+  return os.platform() === "win32" ? "python" : "python3";
 }
 
 function envFlagEnabled(value: string | undefined) {

@@ -30,7 +30,8 @@ npm run dev
 
 The generation playground also expects:
 
-- `python3` on your PATH, or `IMAGENT_PYTHON_BIN` pointing to a Python binary;
+- `python` on Windows or `python3` elsewhere on your PATH, or `IMAGENT_PYTHON_BIN`
+  pointing to a Python binary;
 - a sibling `../imagent` checkout, or `IMAGENT_REPOSITORY_PATH` set to an
   `imagent` repository path;
 - `IMAGENT_PUBLIC_SITE_URL=https://tryimagent.com` if the deployed public origin
