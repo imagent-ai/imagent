@@ -7918,15 +7918,13 @@ body .generation-composer textarea::placeholder {
 
 body .generation-shell .composer-hint {
   align-items: center;
-  border-top: 1px solid rgba(255, 255, 255, 0.07);
-  color: var(--generation-muted);
+  color: rgba(218, 242, 250, 0.42);
   display: flex;
   flex-wrap: wrap;
-  font-size: 12px;
-  gap: 10px;
+  font-size: 11.5px;
+  gap: 8px;
   justify-content: space-between;
-  margin: 2px 6px 0;
-  padding-top: 10px;
+  margin: 0 6px;
 }
 
 body .generation-shell .composer-hint-keys,
@@ -7943,17 +7941,17 @@ body .generation-shell .composer-hint-actions {
 
 body .generation-shell .composer-hint kbd {
   align-items: center;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 7px;
-  color: rgba(218, 242, 250, 0.86);
+  background: rgba(255, 255, 255, 0.045);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 6px;
+  color: rgba(218, 242, 250, 0.72);
   display: inline-flex;
   font: inherit;
-  font-size: 11px;
+  font-size: 10.5px;
   font-weight: 700;
   gap: 4px;
   letter-spacing: 0.02em;
-  padding: 3px 7px;
+  padding: 2px 6px;
 }
 
 body .generation-shell .composer-count {
@@ -7983,10 +7981,106 @@ body .generation-shell .composer-clear-button:hover {
   color: #ffffff;
 }
 
-body .generation-shell .prompt-suggestions button.applied {
-  background: rgba(0, 226, 251, 0.1);
-  border-color: rgba(0, 226, 251, 0.42);
+/* The eyebrow carries an icon like the Home page section kickers do. */
+body .generation-shell .generation-suggestions-head span {
+  align-items: center;
+  display: inline-flex;
+  gap: 7px;
+}
+
+/* Starter prompts follow the Home page promotion-card language: numbered head,
+   icon, label, title, supporting copy, border glow and glare on hover. */
+body .generation-shell .starter-card-shell {
+  display: flex;
+  min-width: 0;
+}
+
+body .generation-shell .starter-card {
+  border-radius: 18px;
+  transition: transform 220ms ease;
+  width: 100%;
+}
+
+body .generation-shell .starter-card:hover {
+  transform: translateY(-3px);
+}
+
+body .generation-shell .starter-card .imagent-effect-card__content {
+  padding: 0;
+}
+
+body .generation-shell .starter-card-head {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 4px;
+  width: 100%;
+}
+
+body .generation-shell .starter-card-index {
+  color: rgba(0, 226, 251, 0.6);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+}
+
+body .generation-shell .starter-card-icon {
+  align-items: center;
+  background: rgba(0, 226, 251, 0.09);
+  border: 1px solid rgba(0, 226, 251, 0.22);
+  border-radius: 10px;
+  color: rgba(0, 226, 251, 0.92);
+  display: inline-flex;
+  height: 30px;
+  justify-content: center;
+  transition: background 200ms ease, border-color 200ms ease, color 200ms ease;
+  width: 30px;
+}
+
+body .generation-shell .starter-card-label {
+  color: rgba(218, 242, 250, 0.44);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+body .generation-shell .prompt-suggestions button strong {
   color: #ffffff;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+body .generation-shell .prompt-suggestions button small {
+  color: var(--generation-muted);
+  display: -webkit-box;
+  font-size: 12.5px;
+  line-height: 1.45;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+body .generation-shell .starter-card:hover .starter-card-icon {
+  background: rgba(0, 226, 251, 0.16);
+  border-color: rgba(0, 226, 251, 0.4);
+  color: #ffffff;
+}
+
+body .generation-shell .starter-card.applied .starter-card-icon {
+  background: rgba(0, 226, 251, 0.24);
+  border-color: rgba(0, 226, 251, 0.6);
+  color: #ffffff;
+}
+
+body .generation-shell .starter-card.applied .border-glow-inner {
+  border-color: rgba(0, 226, 251, 0.48);
+}
+
+body .generation-shell .prompt-suggestions button:focus-visible {
+  outline: 2px solid rgba(0, 226, 251, 0.66);
+  outline-offset: -2px;
 }
 
 body .generation-shell .composer-toolbar {
@@ -8071,27 +8165,26 @@ body .generation-shell .prompt-suggestions {
   justify-content: stretch;
 }
 
+/* The EffectCard shell owns the surface, border and glare; the button is only
+   the hit target and the layout grid inside it. */
 body .generation-shell .prompt-suggestions button {
-  background: rgba(255, 255, 255, 0.055);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 18px;
+  align-items: start;
+  background: transparent;
+  border: 0;
+  border-radius: inherit;
+  box-shadow: none;
   color: var(--generation-muted);
   cursor: pointer;
+  display: grid;
   font: inherit;
-  font-size: 13px;
-  line-height: 1.38;
-  min-height: 78px;
-  padding: 14px;
+  gap: 4px;
+  height: 100%;
+  justify-items: start;
+  min-height: 120px;
+  padding: 14px 15px 15px;
   text-align: left;
-  transition: transform 180ms ease, border-color 180ms ease, background 180ms ease, color 180ms ease;
-}
-
-body .generation-shell .prompt-suggestions button:hover {
-  background: rgba(0, 226, 251, 0.08);
-  border-color: rgba(0, 226, 251, 0.34);
-  box-shadow: none;
-  color: #ffffff;
-  transform: translateY(-3px);
+  transition: none;
+  width: 100%;
 }
 
 body .generation-preview-panel {
@@ -8460,7 +8553,7 @@ html.imagent-reveal-ready body .generation-shell [data-reveal-visible="true"] {
   }
 
   body .generation-composer textarea {
-    min-height: 170px;
+    min-height: 136px;
   }
 
   body .generation-shell .composer-toolbar {
@@ -8851,8 +8944,7 @@ body .generation-model-card,
 body .generation-composer,
 body .generation-preview-surface,
 body .generation-latest-prompt,
-body .generation-run-card,
-body .generation-shell .prompt-suggestions button {
+body .generation-run-card {
   border-color: rgba(86, 221, 255, 0.2);
 }
 
@@ -8869,7 +8961,7 @@ body .generation-composer textarea {
   color: #ffffff;
   font-family: var(--font-space-grotesk), "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
   font-size: 17px;
-  min-height: 190px;
+  min-height: 148px;
 }
 
 body .generation-shell .generation-settings-button,
@@ -9080,7 +9172,7 @@ body .generation-runs {
 
   body .generation-composer textarea {
     font-size: 16px;
-    min-height: 150px;
+    min-height: 124px;
   }
 
   body .generation-preview-surface,

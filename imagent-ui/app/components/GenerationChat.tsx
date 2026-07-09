@@ -3,13 +3,16 @@
 import { FormEvent, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
   AlertCircle,
+  BadgeCheck,
   Check,
   ChevronDown,
+  Clapperboard,
   CornerDownLeft,
   Download,
   Eraser,
   FileJson,
   KeyRound,
+  LayoutDashboard,
   Loader2,
   MessageSquarePlus,
   RadioTower,
@@ -17,9 +20,11 @@ import {
   Settings,
   Sparkles,
   Trash2,
+  Workflow,
   X
 } from "lucide-react";
-import { LandingBackgroundFx } from "@/app/components/EffectCard";
+import type { LucideIcon } from "lucide-react";
+import { EffectCard, LandingBackgroundFx } from "@/app/components/EffectCard";
 import { ScrollReveal } from "@/app/components/ScrollReveal";
 import {
   IMAGENT_GENERATION_MODEL_ID,
@@ -150,11 +155,31 @@ const emptyVerification: VerificationState = {
   models: []
 };
 
-const starterPrompts = [
-  "Create a cinematic square poster for an open-source image agent leaderboard.",
-  "Design a clean benchmark pass badge with a green check mark.",
-  "Generate a product card for a miner contribution dashboard.",
-  "Make a polished visual explaining PR benchmark automation."
+const starterPrompts: Array<{ icon: LucideIcon; label: string; prompt: string; title: string }> = [
+  {
+    icon: Clapperboard,
+    label: "Poster",
+    title: "Cinematic Leaderboard",
+    prompt: "Create a cinematic square poster for an open-source image agent leaderboard."
+  },
+  {
+    icon: BadgeCheck,
+    label: "Badge",
+    title: "Benchmark Pass",
+    prompt: "Design a clean benchmark pass badge with a green check mark."
+  },
+  {
+    icon: LayoutDashboard,
+    label: "Card",
+    title: "Contribution Dashboard",
+    prompt: "Generate a product card for a miner contribution dashboard."
+  },
+  {
+    icon: Workflow,
+    label: "Diagram",
+    title: "PR Automation",
+    prompt: "Make a polished visual explaining PR benchmark automation."
+  }
 ];
 
 export function GenerationChat() {
@@ -701,22 +726,37 @@ export function GenerationChat() {
 
           <div className="generation-suggestions">
             <div className="generation-suggestions-head">
-              <span>Starter Prompts</span>
-              <small>Click to fill</small>
+              <span>
+                <Sparkles size={13} />
+                Starter Prompts
+              </span>
+              <small>Click to fill the composer</small>
             </div>
             <div className="prompt-suggestions">
-              {starterPrompts.map((item) => {
-                const applied = prompt.trim() === item;
+              {starterPrompts.map((item, index) => {
+                const Icon = item.icon;
+                const applied = prompt.trim() === item.prompt;
                 return (
-                  <button
-                    className={applied ? "applied" : ""}
-                    type="button"
-                    aria-pressed={applied}
-                    key={item}
-                    onClick={() => applyStarterPrompt(item)}
+                  <div
+                    className="starter-card-shell"
+                    data-reveal="fade-up"
+                    data-reveal-delay={index + 1}
+                    key={item.title}
                   >
-                    {item}
-                  </button>
+                    <EffectCard className={applied ? "starter-card applied" : "starter-card"} glareOpacity={0.12} radius={18}>
+                      <button type="button" aria-pressed={applied} onClick={() => applyStarterPrompt(item.prompt)}>
+                        <span className="starter-card-head">
+                          <span className="starter-card-index">{String(index + 1).padStart(2, "0")}</span>
+                          <span className="starter-card-icon">
+                            {applied ? <Check size={16} /> : <Icon size={16} />}
+                          </span>
+                        </span>
+                        <span className="starter-card-label">{item.label}</span>
+                        <strong>{item.title}</strong>
+                        <small>{item.prompt}</small>
+                      </button>
+                    </EffectCard>
+                  </div>
                 );
               })}
             </div>
