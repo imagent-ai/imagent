@@ -579,7 +579,7 @@ export function GenerationChat() {
   }
 
   return (
-    <div className="generation-shell">
+    <div className="imagent-landing generation-shell">
       <LandingBackgroundFx />
       <ScrollReveal />
       <section className="generation-hero" aria-labelledby="generation-title" data-reveal="fade-up">
