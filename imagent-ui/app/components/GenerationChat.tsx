@@ -15,7 +15,6 @@ import {
   Send,
   Settings,
   Sparkles,
-  Trash2,
   X
 } from "lucide-react";
 import { EffectCard, LandingBackgroundFx } from "@/app/components/EffectCard";
@@ -410,7 +409,6 @@ export function GenerationChat() {
   const activeMessages = activeSession?.messages || [];
   const latestAgentMessage = [...activeMessages].reverse().find((message) => message.role === "agent");
   const latestUserMessage = [...activeMessages].reverse().find((message) => message.role === "user");
-  const recentSessions = sessions.filter((session) => session.messages.length > 0).slice(0, 5);
   const runtimeState = !runtimeStatus && !runtimeError ? "checking" : runtimeReady ? "ready" : "blocked";
   const latestMetaItems: string[] = [];
 
@@ -449,21 +447,6 @@ export function GenerationChat() {
     setSessions((current) => [session, ...current]);
     setActiveSessionId(session.id);
     setPrompt("");
-  }
-
-  function deleteSession(id: string) {
-    setSessions((current) => {
-      const next = current.filter((session) => session.id !== id);
-      if (!next.length) {
-        const replacement = newSession();
-        setActiveSessionId(replacement.id);
-        return [replacement];
-      }
-      if (activeSessionId === id) {
-        setActiveSessionId(next[0].id);
-      }
-      return next;
-    });
   }
 
   function saveSettings() {
@@ -802,38 +785,6 @@ export function GenerationChat() {
             )}
           </div>
         </div>
-      </section>
-
-      <section className="generation-runs" aria-label="Recent runs">
-        <div className="generation-runs-head">
-          <div>
-            <span>Recent Runs</span>
-            <strong>Saved In This Browser</strong>
-          </div>
-          <small>{recentSessions.length} active</small>
-        </div>
-        {recentSessions.length > 0 ? (
-          <div className="generation-run-list">
-            {recentSessions.map((session) => (
-              <div className={session.id === activeSessionId ? "generation-run-card active" : "generation-run-card"} key={session.id}>
-                <button className="generation-run-select" type="button" onClick={() => setActiveSessionId(session.id)}>
-                  <strong>{session.title}</strong>
-                  <span>{session.messages.length} messages</span>
-                </button>
-                <button
-                  className="generation-run-delete"
-                  type="button"
-                  aria-label={`Delete ${session.title}`}
-                  onClick={() => deleteSession(session.id)}
-                >
-                  <Trash2 size={15} />
-                </button>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <p className="generation-runs-empty">No saved runs yet.</p>
-        )}
       </section>
 
       {settingsOpen && isMounted ? createPortal(
