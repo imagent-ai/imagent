@@ -10141,7 +10141,8 @@ body .generation-studio-progress::after {
   }
 }
 
-body .generation-studio .generation-preview-badge {
+body .generation-studio .generation-studio-chip,
+body .generation-studio .generation-preview-badge.generation-preview-status {
   align-items: center;
   border-radius: 12px;
   box-sizing: border-box;
@@ -10150,15 +10151,85 @@ body .generation-studio .generation-preview-badge {
   font-size: 11px;
   font-weight: 850;
   gap: 7px;
+  height: 32px;
   justify-content: center;
   letter-spacing: 0.08em;
   line-height: 1;
   margin: 0;
   min-height: 32px;
-  padding: 8px 12px;
+  padding: 0 12px;
+  text-align: center;
   text-transform: uppercase;
-  vertical-align: middle;
   white-space: nowrap;
+}
+
+body .generation-studio .generation-status-pill,
+body .generation-studio .generation-model-chip,
+body .generation-studio .generation-new-run-header,
+body .generation-studio .generation-settings-button {
+  align-items: center;
+  border-radius: 12px;
+  box-sizing: border-box;
+  display: inline-flex;
+  gap: 8px;
+  height: 34px;
+  justify-content: center;
+  line-height: 1;
+  min-height: 34px;
+  padding: 0 14px;
+  text-align: center;
+}
+
+body .generation-studio .generation-studio-chip-label {
+  align-items: center;
+  display: inline-flex;
+  justify-content: center;
+  line-height: 1;
+  margin: 0;
+  padding: 0;
+}
+
+body .generation-studio .generation-studio-chip-dot,
+body .generation-studio .generation-status-dot {
+  display: block;
+  flex-shrink: 0;
+  margin: 0;
+}
+
+body .generation-studio .generation-studio-chip svg,
+body .generation-studio .generation-status-pill svg,
+body .generation-studio .generation-model-chip svg {
+  display: block;
+  flex-shrink: 0;
+}
+
+body .generation-studio .generation-studio-kicker-label,
+body .generation-studio .generation-panel-kicker,
+body .generation-studio-latest-prompt > span,
+body .generation-studio-metric > span {
+  align-items: center;
+  display: inline-flex;
+  gap: 6px;
+  justify-content: center;
+  line-height: 1;
+  margin: 0;
+  text-align: center;
+}
+
+body .generation-studio .generation-panel-kicker,
+body .generation-studio .generation-studio-kicker-label,
+body .generation-studio-latest-prompt > span {
+  justify-content: flex-start;
+  text-align: left;
+}
+
+body .generation-studio-metric > span {
+  justify-content: flex-start;
+  text-align: left;
+}
+
+body .generation-studio .generation-preview-badge {
+  border-radius: 12px;
 }
 
 body .generation-studio-preview-head {
@@ -10206,6 +10277,10 @@ body .generation-preview-status-dot {
 
 body .generation-studio .generation-preview-status {
   font-family: var(--font-jetbrains), "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+}
+
+body .generation-studio .generation-preview-status .generation-studio-chip-label {
+  transform: translateY(0.5px);
 }
 
 body .generation-studio .generation-preview-badge.running {
@@ -10463,10 +10538,12 @@ body .generation-studio-bench-card .imagent-effect-card__content {
   padding: 12px 14px;
 }
 
-body .generation-studio-bench-card span {
+body .generation-studio-bench-card .generation-studio-kicker-label {
+  align-self: center;
   color: var(--generation-soft);
   font-size: 11px;
   font-weight: 800;
+  justify-self: start;
   letter-spacing: 0.1em;
   text-transform: uppercase;
 }

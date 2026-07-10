@@ -711,45 +711,47 @@ export function GenerationChat() {
           </div>
         </div>
         <div className="generation-studio-header-rail" aria-label="Generation status">
-          <span className={`generation-status-pill ${runtimeState}`}>
-            <span className="generation-status-dot" />
-            {runtimeState === "checking" ? "Checking Runtime" : runtimeReady ? "Runtime Ready" : "Runtime Blocked"}
+          <span className={`generation-status-pill generation-studio-chip ${runtimeState}`}>
+            <span className="generation-status-dot" aria-hidden="true" />
+            <span className="generation-studio-chip-label">
+              {runtimeState === "checking" ? "Checking Runtime" : runtimeReady ? "Runtime Ready" : "Runtime Blocked"}
+            </span>
           </span>
           {hasConfiguredOpenRouter ? (
-            <span className="generation-status-pill ready">
-              <KeyRound size={14} />
-              OpenRouter Ready
+            <span className="generation-status-pill ready generation-studio-chip">
+              <KeyRound size={14} aria-hidden="true" />
+              <span className="generation-studio-chip-label">OpenRouter Ready</span>
             </span>
           ) : (
-            <button className="generation-status-pill warning generation-status-action" type="button" onClick={openSettings}>
-              <KeyRound size={14} />
-              OpenRouter Needed
+            <button className="generation-status-pill warning generation-status-action generation-studio-chip" type="button" onClick={openSettings}>
+              <KeyRound size={14} aria-hidden="true" />
+              <span className="generation-studio-chip-label">OpenRouter Needed</span>
             </button>
           )}
-          <span className="generation-status-pill">
-            <RadioTower size={14} />
-            Gittensor Powered
+          <span className="generation-status-pill generation-studio-chip">
+            <RadioTower size={14} aria-hidden="true" />
+            <span className="generation-studio-chip-label">Gittensor Powered</span>
           </span>
-          <button className="generation-new-run-header" type="button" onClick={createSession} disabled={!canCreateNewSession}>
-            <MessageSquarePlus size={16} />
-            New Run
+          <button className="generation-new-run-header generation-studio-chip" type="button" onClick={createSession} disabled={!canCreateNewSession}>
+            <MessageSquarePlus size={16} aria-hidden="true" />
+            <span className="generation-studio-chip-label">New Run</span>
           </button>
-          <button className="generation-settings-button" type="button" onClick={openSettings} ref={settingsButtonRef}>
-            <Settings size={17} />
-            Settings
+          <button className="generation-settings-button generation-studio-chip" type="button" onClick={openSettings} ref={settingsButtonRef}>
+            <Settings size={17} aria-hidden="true" />
+            <span className="generation-studio-chip-label">Settings</span>
           </button>
         </div>
       </header>
 
       <div className="generation-studio-bench-strip" data-reveal="fade-up" data-reveal-delay="1">
         <EffectCard animated className="generation-studio-bench-card" radius={17} glareOpacity={0.1}>
-          <Sparkles size={17} />
-          <span>Model</span>
+          <Sparkles size={17} aria-hidden="true" />
+          <span className="generation-studio-kicker-label">Model</span>
           <strong>{IMAGENT_GENERATION_MODEL_NAME}</strong>
         </EffectCard>
         <EffectCard animated className="generation-studio-bench-card" radius={17} glareOpacity={0.1}>
-          <ShieldCheck size={17} />
-          <span>Bench Rule</span>
+          <ShieldCheck size={17} aria-hidden="true" />
+          <span className="generation-studio-kicker-label">Bench Rule</span>
           <strong>Agent Is The Variable</strong>
         </EffectCard>
       </div>
@@ -815,9 +817,9 @@ export function GenerationChat() {
                   </button>
                 )}
               </div>
-              <div className="generation-model-chip">
-                <Sparkles size={15} />
-                <span>{selectedComposerModel?.name || labelForModel(settings.model, composerModelChoices)}</span>
+              <div className="generation-model-chip generation-studio-chip">
+                <Sparkles size={15} aria-hidden="true" />
+                <span className="generation-studio-chip-label">{selectedComposerModel?.name || labelForModel(settings.model, composerModelChoices)}</span>
               </div>
             </div>
 
@@ -944,9 +946,9 @@ export function GenerationChat() {
               <span className="generation-panel-kicker">Preview</span>
               <div className="generation-studio-preview-title-row">
                 <strong>Agent Output</strong>
-                <span className={`${previewBadgeClass} generation-preview-status`} role="status" aria-live="polite">
-                  <span className="generation-preview-status-dot" aria-hidden="true" />
-                  {previewBadgeLabel}
+                <span className={`${previewBadgeClass} generation-preview-status generation-studio-chip`} role="status" aria-live="polite">
+                  <span className="generation-studio-chip-dot generation-preview-status-dot" aria-hidden="true" />
+                  <span className="generation-studio-chip-label">{previewBadgeLabel}</span>
                 </span>
               </div>
             </div>
