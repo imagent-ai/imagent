@@ -13,18 +13,17 @@ import {
   FileJson,
   Gauge,
   KeyRound,
+  Layers,
   LayoutGrid,
   Loader2,
   MessageSquarePlus,
-  PanelLeftClose,
-  PanelLeftOpen,
+  Pencil,
   RadioTower,
   RefreshCw,
   Send,
   Settings,
   ShieldCheck,
   Sparkles,
-  Trash2,
   Wand2,
   X
 } from "lucide-react";
@@ -216,8 +215,9 @@ export function GenerationChat() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [isCheckingRuntime, setIsCheckingRuntime] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
-  const [railOpen, setRailOpen] = useState(true);
   const [selectedStarterId, setSelectedStarterId] = useState<string | null>(null);
+  const [titleEditing, setTitleEditing] = useState(false);
+  const [titleDraft, setTitleDraft] = useState("");
   const committedSettingsRef = useRef(settings);
   const settingsButtonRef = useRef<HTMLButtonElement | null>(null);
   const settingsCloseButtonRef = useRef<HTMLButtonElement | null>(null);
@@ -225,6 +225,7 @@ export function GenerationChat() {
   const settingsTriggerRef = useRef<HTMLElement | null>(null);
   const composerTextareaRef = useRef<HTMLTextAreaElement | null>(null);
   const apiKeyInputRef = useRef<HTMLInputElement | null>(null);
+  const titleInputRef = useRef<HTMLInputElement | null>(null);
 
   async function loadRuntimeStatus() {
     setIsCheckingRuntime(true);
@@ -470,13 +471,12 @@ export function GenerationChat() {
   const previewFailed = !isGenerating && !previewHasImage && Boolean(latestAgentMessage?.error);
   const previewBadgeLabel = isGenerating ? "Running" : previewHasImage ? "Ready" : previewFailed ? "Failed" : "Waiting";
   const previewBadgeClass = `generation-preview-badge${isGenerating ? " running" : previewFailed ? " failed" : previewHasImage ? " ready" : ""}`;
-  const savedRuns = sessions.filter((session) => session.messages.length > 0);
+  const provenanceParts = [
+    latestAgentMessage?.agentId,
+    latestAgentMessage?.capability,
+    latestAgentMessage?.model || (previewHasImage ? settings.model : null)
+  ].filter((value): value is string => Boolean(value));
   const resultMetrics = [
-    latestAgentMessage?.agentId ? { icon: Sparkles, label: "Agent", value: latestAgentMessage.agentId } : null,
-    latestAgentMessage?.capability ? { icon: Gauge, label: "Capability", value: latestAgentMessage.capability } : null,
-    latestAgentMessage?.model || settings.model
-      ? { icon: RadioTower, label: "Model", value: latestAgentMessage?.model || settings.model }
-      : null,
     latestAgentMessage?.quality ? { icon: LayoutGrid, label: "Quality", value: latestAgentMessage.quality } : null,
     typeof latestAgentMessage?.latencyMs === "number"
       ? { icon: Clock3, label: "Latency", value: `${latestAgentMessage.latencyMs.toFixed(0)} ms` }
@@ -485,7 +485,7 @@ export function GenerationChat() {
       ? { icon: Coins, label: "Cost", value: `$${latestAgentMessage.costUsd.toFixed(6)}` }
       : null,
     typeof latestAgentMessage?.candidateCount === "number" && latestAgentMessage.candidateCount > 0
-      ? { icon: LayoutGrid, label: "Candidates", value: String(latestAgentMessage.candidateCount) }
+      ? { icon: Layers, label: "Candidates", value: String(latestAgentMessage.candidateCount) }
       : null,
     typeof latestAgentMessage?.roundCount === "number" && latestAgentMessage.roundCount > 0
       ? { icon: Gauge, label: "Rounds", value: String(latestAgentMessage.roundCount) }
@@ -559,69 +559,41 @@ export function GenerationChat() {
     composerTextareaRef.current?.focus({ preventScroll: true });
   }
 
-  function selectSession(sessionId: string) {
-    const session = sessions.find((item) => item.id === sessionId);
-    const lastUser = session ? latestUserMessageFor(session) : undefined;
-    setActiveSessionId(sessionId);
-    setPrompt(lastUser?.content || "");
-    setSelectedStarterId(null);
+  function beginTitleEdit() {
+    if (!activeSession) {
+      return;
+    }
+    setTitleDraft(activeSession.title);
+    setTitleEditing(true);
     window.requestAnimationFrame(() => {
-      const textarea = composerTextareaRef.current;
-      if (!textarea) {
-        return;
-      }
-      textarea.style.height = "auto";
-      textarea.style.height = `${Math.min(textarea.scrollHeight, 280)}px`;
+      titleInputRef.current?.focus({ preventScroll: true });
+      titleInputRef.current?.select();
     });
   }
 
-  function deleteSession(sessionId: string) {
-    setSessions((current) => {
-      const next = current.filter((session) => session.id !== sessionId);
-      if (!next.length) {
-        const fresh = newSession();
-        setActiveSessionId(fresh.id);
-        setPrompt("");
-        setSelectedStarterId(null);
-        return [fresh];
-      }
-      if (activeSessionId === sessionId) {
-        const replacement = next[0];
-        setActiveSessionId(replacement.id);
-        const lastUser = latestUserMessageFor(replacement);
-        setPrompt(lastUser?.content || "");
-        setSelectedStarterId(null);
-      }
-      return next;
-    });
+  function commitTitleEdit() {
+    if (!activeSession) {
+      setTitleEditing(false);
+      return;
+    }
+    const trimmed = titleDraft.trim();
+    if (!trimmed) {
+      setTitleEditing(false);
+      return;
+    }
+    setSessions((current) =>
+      current.map((session) =>
+        session.id === activeSession.id
+          ? { ...session, title: trimmed, updatedAt: new Date().toISOString() }
+          : session
+      )
+    );
+    setTitleEditing(false);
   }
 
-  function runStatusFor(session: ChatSession): "ready" | "failed" | "waiting" {
-    const agent = latestAgentMessageFor(session);
-    if (!agent) {
-      return "waiting";
-    }
-    if (agent.error) {
-      return "failed";
-    }
-    if (agent.imageUrl) {
-      return "ready";
-    }
-    return "waiting";
-  }
-
-  function formatRelativeTime(value: string) {
-    const deltaMs = Date.now() - new Date(value).getTime();
-    const minutes = Math.max(1, Math.round(deltaMs / 60000));
-    if (minutes < 60) {
-      return `${minutes}m ago`;
-    }
-    const hours = Math.round(minutes / 60);
-    if (hours < 48) {
-      return `${hours}h ago`;
-    }
-    const days = Math.round(hours / 24);
-    return `${days}d ago`;
+  function cancelTitleEdit() {
+    setTitleEditing(false);
+    setTitleDraft(activeSession?.title || "");
   }
 
   function updateComposerModel(model: string) {
@@ -758,6 +730,10 @@ export function GenerationChat() {
             <RadioTower size={14} />
             Gittensor Powered
           </span>
+          <button className="generation-new-run-header" type="button" onClick={createSession} disabled={!canCreateNewSession}>
+            <MessageSquarePlus size={16} />
+            New Run
+          </button>
           <button className="generation-settings-button" type="button" onClick={openSettings} ref={settingsButtonRef}>
             <Settings size={17} />
             Settings
@@ -807,71 +783,37 @@ export function GenerationChat() {
         </div>
       ) : null}
 
-      <section className="generation-studio-grid" aria-label="Generation workspace" data-reveal="fade-up" data-reveal-delay="2">
-        <aside className={`generation-studio-rail ${railOpen ? "is-open" : "is-collapsed"}`} aria-label="Saved runs">
-          <div className="generation-studio-rail-head">
-            <div>
-              <span>Saved Runs</span>
-              <strong>{savedRuns.length} total</strong>
-            </div>
-            <button
-              className="generation-rail-toggle"
-              type="button"
-              aria-label={railOpen ? "Collapse run rail" : "Expand run rail"}
-              onClick={() => setRailOpen((current) => !current)}
-            >
-              {railOpen ? <PanelLeftClose size={16} /> : <PanelLeftOpen size={16} />}
-            </button>
-          </div>
-          {railOpen ? (
-            <>
-              <button className="generation-new-run generation-studio-new-run" type="button" onClick={createSession} disabled={!canCreateNewSession}>
-                <MessageSquarePlus size={16} />
-                New Run
-              </button>
-              <div className="generation-studio-run-list custom-scrollbar">
-                {savedRuns.length === 0 ? (
-                  <p className="generation-studio-run-empty">Runs appear here after your first generation.</p>
-                ) : (
-                  savedRuns.map((session) => {
-                    const isActive = session.id === activeSession?.id;
-                    const runStatus = runStatusFor(session);
-                    return (
-                      <div className={`generation-studio-run-row ${isActive ? "is-active" : ""}`} key={session.id}>
-                        <button
-                          className={`generation-studio-run-card ${isActive ? "is-active" : ""}`}
-                          type="button"
-                          onClick={() => selectSession(session.id)}
-                        >
-                          <span className={`generation-run-status ${runStatus}`} aria-hidden="true" />
-                          <span className="generation-studio-run-copy">
-                            <strong>{session.title}</strong>
-                            <small>{formatRelativeTime(session.updatedAt)}</small>
-                          </span>
-                        </button>
-                        <button
-                          className="generation-run-delete"
-                          type="button"
-                          aria-label={`Delete ${session.title}`}
-                          onClick={() => deleteSession(session.id)}
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      </div>
-                    );
-                  })
-                )}
-              </div>
-            </>
-          ) : null}
-        </aside>
-
+      <section className="generation-studio-workspace" aria-label="Generation workspace" data-reveal="fade-up" data-reveal-delay="2">
         <div className="generation-studio-main">
           <EffectCard animated className="generation-studio-panel generation-studio-composer" radius={24} glareOpacity={0.12}>
             <div className="generation-panel-head">
               <div>
                 <span>Prompt</span>
-                <strong>{activeSession?.title || "New Run"}</strong>
+                {titleEditing ? (
+                  <input
+                    ref={titleInputRef}
+                    className="generation-title-input"
+                    value={titleDraft}
+                    onChange={(event) => setTitleDraft(event.target.value)}
+                    onBlur={commitTitleEdit}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") {
+                        event.preventDefault();
+                        commitTitleEdit();
+                      }
+                      if (event.key === "Escape") {
+                        event.preventDefault();
+                        cancelTitleEdit();
+                      }
+                    }}
+                    aria-label="Run title"
+                  />
+                ) : (
+                  <button className="generation-title-edit" type="button" onClick={beginTitleEdit}>
+                    <strong>{activeSession?.title || "New Run"}</strong>
+                    <Pencil size={14} aria-hidden="true" />
+                  </button>
+                )}
               </div>
               <div className="generation-model-chip">
                 <Sparkles size={15} />
@@ -976,6 +918,11 @@ export function GenerationChat() {
                         glareOpacity={0.1}
                       >
                       <button type="button" onClick={() => applyStarterPrompt(card)} aria-pressed={isSelected}>
+                        {isSelected ? (
+                          <span className="generation-studio-starter-check" aria-hidden="true">
+                            <Check size={14} />
+                          </span>
+                        ) : null}
                         <div className="generation-studio-starter-head">
                           <span>{String(index + 1).padStart(2, "0")}</span>
                           <Icon size={18} />
@@ -1039,6 +986,10 @@ export function GenerationChat() {
                 <span>Prompt</span>
                 <p>{latestUserMessage.content}</p>
               </div>
+            ) : null}
+
+            {provenanceParts.length > 0 ? (
+              <p className="generation-studio-provenance">{provenanceParts.join(" · ")}</p>
             ) : null}
 
             {resultMetrics.length > 0 ? (
@@ -1402,14 +1353,6 @@ function newSession(): ChatSession {
 
 function titleFromPrompt(prompt: string) {
   return prompt.length > 42 ? `${prompt.slice(0, 42)}...` : prompt;
-}
-
-function latestAgentMessageFor(session: ChatSession) {
-  return [...session.messages].reverse().find((message) => message.role === "agent");
-}
-
-function latestUserMessageFor(session: ChatSession) {
-  return [...session.messages].reverse().find((message) => message.role === "user");
 }
 
 function labelForModel(model: string, models: OpenRouterModelOption[]) {
