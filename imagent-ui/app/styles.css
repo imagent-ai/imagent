@@ -7653,7 +7653,7 @@ body .generation-shell::after {
   width: 620px;
 }
 
-body .generation-shell > * {
+body .generation-shell > :not(.imagent-landing__background-fx) {
   position: relative;
   z-index: 1;
 }
@@ -8669,16 +8669,32 @@ body .generation-shell {
 }
 
 body:has(.generation-shell) {
-  background: #07182e;
+  --landing-bg: #07182e;
+  --landing-card: rgba(13, 48, 86, 0.82);
+  --landing-card-soft: rgba(12, 43, 78, 0.66);
+  --landing-line: rgba(86, 221, 255, 0.24);
+  --landing-line-strong: rgba(112, 231, 255, 0.42);
+  --landing-text: #f2fbff;
+  --landing-muted: #b8d7e4;
+  --landing-cyan: #00e2fb;
+  --landing-blue: #0171f9;
+  background: var(--landing-bg);
+  color-scheme: dark;
   overflow-x: clip;
 }
 
 body:has(.generation-shell) main {
-  background: #07182e;
+  background:
+    radial-gradient(circle at 78% 0%, rgba(0, 226, 251, 0.16), transparent 32%),
+    radial-gradient(circle at 8% 34%, rgba(1, 113, 249, 0.14), transparent 28%),
+    linear-gradient(180deg, #07182e 0%, #0b2442 48%, #07182e 100%);
+  padding-bottom: 0;
 }
 
-body:has(.generation-shell) .site-background {
-  display: none;
+body:has(.generation-shell) .site-background,
+body:has(.generation-shell) .site-background__base {
+  background: #07182e;
+  display: block;
 }
 
 body .generation-hero,
@@ -8836,12 +8852,14 @@ body .generation-shell {
   color: var(--landing-text);
   font-family: var(--font-space-grotesk), "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
   font-feature-settings: "kern" 1;
+  isolation: isolate;
   margin: 0 auto;
   max-width: 1280px;
   min-height: calc(100vh - 60px);
   overflow-x: clip;
   overflow-y: visible;
   padding: clamp(22px, 3vw, 40px) 22px 42px;
+  position: relative;
   width: 100%;
   z-index: 1;
 }
@@ -8853,7 +8871,7 @@ body .generation-shell::after {
 
 body .generation-shell > :not(.imagent-landing__background-fx) {
   position: relative;
-  z-index: 1;
+  z-index: 2;
 }
 
 body > .generation-settings-backdrop {
@@ -9348,6 +9366,7 @@ body > .generation-settings-backdrop .settings-modal footer .primary-button {
 
 body .generation-shell .imagent-landing__background-fx {
   inset: 60px 0 0;
+  z-index: 1;
 }
 
 body .generation-hero,
@@ -10060,125 +10079,6 @@ body .generation-shell .generation-preview-provenance {
   word-break: break-word;
 }
 
-/* -- Recent runs ----------------------------------------------------------- */
-
-/* Fluid instead of a fixed 5-up grid, which truncated every title to two words. */
-body .generation-shell .generation-run-list {
-  display: grid;
-  gap: 10px;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-}
-
-body .generation-shell .generation-run-shell {
-  display: flex;
-  min-width: 0;
-}
-
-body .generation-shell .generation-run-card {
-  border-radius: 18px;
-  transition: transform 200ms ease;
-  width: 100%;
-}
-
-body .generation-shell .generation-run-card:hover {
-  transform: translateY(-3px);
-}
-
-body .generation-shell .generation-run-card .imagent-effect-card__content {
-  align-items: center;
-  display: grid;
-  gap: 6px;
-  grid-template-columns: minmax(0, 1fr) auto;
-  padding: 12px 12px 12px 14px;
-}
-
-body .generation-shell .generation-run-select {
-  align-items: center;
-  background: transparent;
-  border: 0;
-  color: var(--generation-muted);
-  cursor: pointer;
-  display: grid;
-  font: inherit;
-  gap: 10px;
-  grid-template-columns: auto minmax(0, 1fr);
-  min-width: 0;
-  padding: 0;
-  text-align: left;
-}
-
-body .generation-shell .generation-run-mark {
-  align-items: center;
-  background: rgba(0, 226, 251, 0.09);
-  border: 1px solid rgba(0, 226, 251, 0.2);
-  border-radius: 9px;
-  color: rgba(0, 226, 251, 0.9);
-  display: inline-flex;
-  height: 28px;
-  justify-content: center;
-  width: 28px;
-}
-
-body .generation-shell .generation-run-card.active .generation-run-mark {
-  background: rgba(0, 226, 251, 0.22);
-  border-color: rgba(0, 226, 251, 0.55);
-  color: #ffffff;
-}
-
-body .generation-shell .generation-run-card.active .border-glow-inner {
-  border-color: rgba(0, 226, 251, 0.46);
-}
-
-body .generation-shell .generation-run-copy {
-  display: grid;
-  gap: 2px;
-  min-width: 0;
-}
-
-body .generation-shell .generation-run-copy strong {
-  color: #ffffff;
-  font-size: 13.5px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-body .generation-shell .generation-run-copy span {
-  color: rgba(218, 242, 250, 0.46);
-  font-size: 11.5px;
-}
-
-body .generation-shell .generation-run-delete {
-  background: transparent;
-  border: 1px solid transparent;
-  border-radius: 9px;
-  color: rgba(218, 242, 250, 0.4);
-  cursor: pointer;
-  display: inline-flex;
-  padding: 6px;
-  transition: color 180ms ease, background 180ms ease, border-color 180ms ease;
-}
-
-body .generation-shell .generation-run-delete:hover {
-  background: rgba(255, 120, 130, 0.12);
-  border-color: rgba(255, 120, 130, 0.4);
-  color: #ff9aa4;
-}
-
-body .generation-shell .generation-runs-empty {
-  align-items: center;
-  border: 1px dashed rgba(255, 255, 255, 0.12);
-  border-radius: 16px;
-  color: var(--generation-muted);
-  display: flex;
-  gap: 10px;
-  padding: 16px 18px;
-}
-
-body .generation-shell .generation-runs-empty p {
-  margin: 0;
-}
-
 /* -- Responsive ------------------------------------------------------------ */
 
 @media (max-width: 980px) {
@@ -10199,7 +10099,6 @@ body .generation-shell .generation-runs-empty p {
     animation: none;
   }
 
-  body .generation-shell .generation-run-card:hover,
   body .generation-shell .starter-card:hover,
   body .generation-shell .generation-status-pill.actionable:hover {
     transform: none;

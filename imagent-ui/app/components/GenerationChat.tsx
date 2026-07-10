@@ -12,7 +12,6 @@ import {
   Download,
   Eraser,
   FileJson,
-  ImageIcon,
   KeyRound,
   LayoutDashboard,
   Loader2,
@@ -21,7 +20,6 @@ import {
   Send,
   Settings,
   Sparkles,
-  Trash2,
   Workflow,
   X
 } from "lucide-react";
@@ -467,7 +465,6 @@ export function GenerationChat() {
   const activeMessages = activeSession?.messages || [];
   const latestAgentMessage = [...activeMessages].reverse().find((message) => message.role === "agent");
   const latestUserMessage = [...activeMessages].reverse().find((message) => message.role === "user");
-  const recentSessions = sessions.filter((session) => session.messages.length > 0).slice(0, 5);
   const runtimeState = !runtimeStatus && !runtimeError ? "checking" : runtimeReady ? "ready" : "blocked";
   const stageState = isGenerating
     ? "running"
@@ -518,21 +515,6 @@ export function GenerationChat() {
     setSessions((current) => [session, ...current]);
     setActiveSessionId(session.id);
     setPrompt("");
-  }
-
-  function deleteSession(id: string) {
-    setSessions((current) => {
-      const next = current.filter((session) => session.id !== id);
-      if (!next.length) {
-        const replacement = newSession();
-        setActiveSessionId(replacement.id);
-        return [replacement];
-      }
-      if (activeSessionId === id) {
-        setActiveSessionId(next[0].id);
-      }
-      return next;
-    });
   }
 
   function saveSettings() {
@@ -665,7 +647,7 @@ export function GenerationChat() {
   }
 
   return (
-    <div className="generation-shell">
+    <div className="imagent-landing generation-shell">
       <LandingBackgroundFx />
       <ScrollReveal />
       <section className="generation-hero" aria-labelledby="generation-title" data-reveal="fade-up">
@@ -940,63 +922,6 @@ export function GenerationChat() {
             ) : null}
           </div>
         </div>
-      </section>
-
-      <section className="generation-runs" aria-label="Recent runs">
-        <div className="generation-runs-head">
-          <div>
-            <span>Recent Runs</span>
-            <strong>Saved In This Browser</strong>
-          </div>
-          <small>{recentSessions.length} active</small>
-        </div>
-        {recentSessions.length > 0 ? (
-          <div className="generation-run-list">
-            {recentSessions.map((session) => {
-              const active = session.id === activeSessionId;
-              const images = session.messages.filter((message) => Boolean(message.imageUrl)).length;
-              // No data-reveal here: ScrollReveal only observes elements that exist at
-              // mount, and run cards are created after a generation.
-              return (
-                <div className="generation-run-shell" key={session.id}>
-                  <EffectCard className={active ? "generation-run-card active" : "generation-run-card"} glareOpacity={0.1} radius={18}>
-                    <button
-                      className="generation-run-select"
-                      type="button"
-                      aria-current={active}
-                      onClick={() => setActiveSessionId(session.id)}
-                    >
-                      <span className="generation-run-mark" aria-hidden="true">
-                        {active ? <RadioTower size={14} /> : <ImageIcon size={14} />}
-                      </span>
-                      <span className="generation-run-copy">
-                        <strong>{session.title}</strong>
-                        <span>
-                          {images > 0 ? `${images} image${images === 1 ? "" : "s"}` : "No image yet"}
-                          {" · "}
-                          {formatRelativeTime(session.updatedAt)}
-                        </span>
-                      </span>
-                    </button>
-                    <button
-                      className="generation-run-delete"
-                      type="button"
-                      aria-label={`Delete ${session.title}`}
-                      onClick={() => deleteSession(session.id)}
-                    >
-                      <Trash2 size={15} />
-                    </button>
-                  </EffectCard>
-                </div>
-              );
-            })}
-          </div>
-        ) : (
-          <div className="generation-runs-empty">
-            <ImageIcon size={18} />
-            <p>No saved runs yet. Your generations are stored in this browser only.</p>
-          </div>
-        )}
       </section>
 
       {settingsOpen && isMounted ? createPortal(
@@ -1320,26 +1245,6 @@ function newSession(): ChatSession {
     updatedAt: now,
     messages: []
   };
-}
-
-function formatRelativeTime(value: string) {
-  const then = new Date(value).getTime();
-  if (!Number.isFinite(then)) {
-    return "just now";
-  }
-  const seconds = Math.max(0, Math.round((Date.now() - then) / 1000));
-  if (seconds < 60) {
-    return "just now";
-  }
-  const minutes = Math.round(seconds / 60);
-  if (minutes < 60) {
-    return `${minutes}m ago`;
-  }
-  const hours = Math.round(minutes / 60);
-  if (hours < 24) {
-    return `${hours}h ago`;
-  }
-  return `${Math.round(hours / 24)}d ago`;
 }
 
 function titleFromPrompt(prompt: string) {
