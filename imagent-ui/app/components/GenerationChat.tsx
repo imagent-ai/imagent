@@ -904,7 +904,7 @@ export function GenerationChat() {
 
             <div className="generation-studio-starters">
               <div className="generation-suggestions-head">
-                <span>Starter Prompts</span>
+                <span className="generation-panel-kicker">Starter Prompts</span>
                 <small>Home card language</small>
               </div>
               <div className="generation-studio-starter-grid">

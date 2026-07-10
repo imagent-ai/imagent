@@ -7622,6 +7622,10 @@ body .generation-shell {
   position: relative;
 }
 
+body .generation-shell.generation-studio {
+  overflow: visible;
+}
+
 body .generation-shell::before,
 body .generation-shell::after {
   content: "";
@@ -9772,12 +9776,42 @@ body .generation-studio-panel {
   display: grid;
   gap: 16px;
   min-width: 0;
+  overflow: visible;
   padding: 18px;
+}
+
+body .generation-studio-panel.imagent-effect-card,
+body .generation-studio-panel .imagent-effect-card__content,
+body .generation-studio-panel .border-glow-inner {
+  height: auto;
+  min-height: 0;
+  overflow: visible;
 }
 
 body .generation-studio-panel .imagent-effect-card__content {
   display: grid;
   gap: 14px;
+}
+
+body .generation-studio .generation-panel-kicker,
+body .generation-studio .generation-suggestions-head .generation-panel-kicker {
+  color: var(--generation-cyan);
+  display: block;
+  letter-spacing: 0.06em;
+  overflow: visible;
+  padding-inline: 4px 2px;
+  text-indent: 0;
+  width: fit-content;
+}
+
+body .generation-studio .generation-panel-head,
+body .generation-studio .generation-panel-head-copy {
+  overflow: visible;
+}
+
+body .generation-studio .generation-panel-head-copy {
+  min-width: 0;
+  width: 100%;
 }
 
 body .generation-model-chip {
@@ -10204,17 +10238,14 @@ body .generation-studio .generation-model-chip svg {
 }
 
 body .generation-studio .generation-studio-kicker-label,
-body .generation-studio .generation-panel-kicker,
 body .generation-studio-metric > span {
   align-items: center;
   display: block;
   gap: 6px;
   justify-content: flex-start;
-  letter-spacing: 0.08em;
   line-height: 1.2;
   margin: 0;
   overflow: visible;
-  padding-inline: 1px;
   text-align: left;
 }
 
@@ -10488,6 +10519,12 @@ body .generation-studio .generation-composer .composer-clear-button {
 }
 
 @media (max-width: 720px) {
+  body .generation-shell.generation-studio {
+    min-height: auto;
+    overflow: visible;
+    padding-bottom: 40px;
+  }
+
   body .generation-studio-header {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -10511,6 +10548,17 @@ body .generation-studio .generation-composer .composer-clear-button {
 
   body .generation-studio-starter-grid > div {
     scroll-snap-align: start;
+  }
+
+  body .generation-studio .generation-panel-head {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 10px;
+    overflow: visible;
+  }
+
+  body .generation-studio .composer-toolbar {
+    gap: 10px;
   }
 
   body .generation-studio-metrics {
