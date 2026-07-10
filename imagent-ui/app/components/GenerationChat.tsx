@@ -184,6 +184,8 @@ export function GenerationChat() {
   const settingsCloseButtonRef = useRef<HTMLButtonElement | null>(null);
   const settingsModalRef = useRef<HTMLElement | null>(null);
   const settingsTriggerRef = useRef<HTMLElement | null>(null);
+  const composerTextareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const [selectedStarterPrompt, setSelectedStarterPrompt] = useState<string | null>(null);
 
   async function loadRuntimeStatus() {
     try {
@@ -234,6 +236,15 @@ export function GenerationChat() {
   useEffect(() => {
     committedSettingsRef.current = settings;
   }, [settings]);
+
+  useEffect(() => {
+    const textarea = composerTextareaRef.current;
+    if (!textarea) {
+      return;
+    }
+    textarea.style.height = "auto";
+    textarea.style.height = `${Math.min(textarea.scrollHeight, 280)}px`;
+  }, [prompt]);
 
   useEffect(() => {
     if (!settingsOpen) {
@@ -481,6 +492,28 @@ export function GenerationChat() {
     setSettingsOpen(false);
   }
 
+  function applyStarterPrompt(item: string) {
+    setSelectedStarterPrompt(item);
+    setPrompt(item);
+    window.requestAnimationFrame(() => {
+      const textarea = composerTextareaRef.current;
+      if (!textarea) {
+        return;
+      }
+      textarea.focus({ preventScroll: true });
+      const end = item.length;
+      textarea.setSelectionRange(end, end);
+      textarea.style.height = "auto";
+      textarea.style.height = `${Math.min(textarea.scrollHeight, 280)}px`;
+    });
+  }
+
+  function clearPrompt() {
+    setPrompt("");
+    setSelectedStarterPrompt(null);
+    composerTextareaRef.current?.focus({ preventScroll: true });
+  }
+
   function updateComposerModel(model: string) {
     setSettings((current) => ({...current, model: model === IMAGENT_GENERATION_MODEL_ID ? model : IMAGENT_GENERATION_MODEL_ID}));
     setOpenDropdown(null);
@@ -644,10 +677,17 @@ export function GenerationChat() {
           <div className="generation-composer-wrap">
             <form className="generation-composer" onSubmit={submit}>
               <textarea
+                ref={composerTextareaRef}
                 value={prompt}
-                onChange={(event) => setPrompt(event.target.value)}
+                onChange={(event) => {
+                  const nextPrompt = event.target.value;
+                  setPrompt(nextPrompt);
+                  if (selectedStarterPrompt && nextPrompt !== selectedStarterPrompt) {
+                    setSelectedStarterPrompt(null);
+                  }
+                }}
                 placeholder="Describe the image you want the agent to plan and generate"
-                rows={8}
+                rows={3}
                 onKeyDown={(event) => {
                   if (event.key === "Enter" && !event.shiftKey) {
                     event.preventDefault();
@@ -655,6 +695,19 @@ export function GenerationChat() {
                   }
                 }}
               />
+              <div className="composer-hint-row">
+                <small className="composer-keyboard-hint">
+                  <kbd>Enter</kbd> generate · <kbd>Shift</kbd>+<kbd>Enter</kbd> new line
+                </small>
+                {prompt.length > 0 ? (
+                  <div className="composer-hint-actions">
+                    <small className="composer-char-count">{prompt.length} chars</small>
+                    <button className="composer-clear-button" type="button" onClick={clearPrompt}>
+                      Clear
+                    </button>
+                  </div>
+                ) : null}
+              </div>
               <div className="composer-toolbar">
                 <div className="generation-composer-controls">
                   {hasConfiguredOpenRouter ? (
@@ -709,7 +762,13 @@ export function GenerationChat() {
             </div>
             <div className="prompt-suggestions">
               {starterPrompts.map((item) => (
-                <button type="button" key={item} onClick={() => setPrompt(item)}>
+                <button
+                  type="button"
+                  key={item}
+                  className={selectedStarterPrompt === item ? "is-selected" : undefined}
+                  aria-pressed={selectedStarterPrompt === item}
+                  onClick={() => applyStarterPrompt(item)}
+                >
                   {item}
                 </button>
               ))}
