@@ -10533,21 +10533,26 @@ body .generation-studio .generation-composer .composer-clear-button {
     justify-content: flex-start;
   }
 
+  body .generation-studio-starters {
+    display: grid;
+    margin-top: 14px;
+    overflow: visible;
+    width: 100%;
+  }
+
   body .generation-studio-starter-grid {
     display: grid;
     gap: 12px;
-    grid-auto-columns: minmax(240px, 78vw);
-    grid-auto-flow: column;
-    grid-template-columns: unset;
-    overflow-x: auto;
-    overscroll-behavior-x: contain;
-    padding-bottom: 4px;
-    scroll-snap-type: x proximity;
-    -webkit-overflow-scrolling: touch;
+    grid-auto-columns: unset;
+    grid-auto-flow: row;
+    grid-template-columns: minmax(0, 1fr);
+    overflow: visible;
+    padding-bottom: 0;
+    scroll-snap-type: none;
   }
 
-  body .generation-studio-starter-grid > div {
-    scroll-snap-align: start;
+  body .generation-studio .generation-composer textarea {
+    min-height: 96px;
   }
 
   body .generation-studio .generation-panel-head {

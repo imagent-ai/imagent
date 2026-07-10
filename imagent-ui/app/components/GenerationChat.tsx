@@ -912,13 +912,13 @@ export function GenerationChat() {
                   const Icon = card.icon;
                   const isSelected = selectedStarterId === card.id;
                   return (
-                    <div data-reveal="fade-up" data-reveal-delay={index + 1} key={card.id}>
-                      <EffectCard
-                        animated={isSelected}
-                        className={`generation-studio-starter-card ${isSelected ? "is-selected" : ""}`}
-                        radius={20}
-                        glareOpacity={0.1}
-                      >
+                    <EffectCard
+                      animated={isSelected}
+                      className={`generation-studio-starter-card ${isSelected ? "is-selected" : ""}`}
+                      key={card.id}
+                      radius={20}
+                      glareOpacity={0.1}
+                    >
                       <button type="button" onClick={() => applyStarterPrompt(card)} aria-pressed={isSelected}>
                         {isSelected ? (
                           <span className="generation-studio-starter-check" aria-hidden="true">
@@ -934,7 +934,6 @@ export function GenerationChat() {
                         <p>{card.prompt}</p>
                       </button>
                     </EffectCard>
-                    </div>
                   );
                 })}
               </div>
