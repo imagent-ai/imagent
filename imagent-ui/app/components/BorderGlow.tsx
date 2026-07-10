@@ -1,6 +1,14 @@
 "use client";
 
-import { useCallback, useEffect, useRef, type CSSProperties, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  type CSSProperties,
+  type MouseEvent as ReactMouseEvent,
+  type PointerEvent as ReactPointerEvent,
+  type ReactNode
+} from "react";
 import "./BorderGlow.css";
 
 type BorderGlowProps = {
@@ -164,7 +172,7 @@ export function BorderGlow({
   );
 
   const handlePointerMove = useCallback(
-    (event: ReactPointerEvent<HTMLDivElement>) => {
+    (event: ReactPointerEvent<HTMLDivElement> | ReactMouseEvent<HTMLDivElement>) => {
       const card = cardRef.current;
       if (!card) {
         return;
@@ -179,6 +187,15 @@ export function BorderGlow({
     },
     [getCursorAngle, getEdgeProximity]
   );
+
+  const handlePointerLeave = useCallback(() => {
+    const card = cardRef.current;
+    if (!card) {
+      return;
+    }
+
+    card.style.setProperty("--edge-proximity", "0");
+  }, []);
 
   useEffect(() => {
     if (!animated || !cardRef.current) {
@@ -219,6 +236,7 @@ export function BorderGlow({
         delay: 2500,
         duration: 1500,
         ease: easeInCubic,
+        end: 0,
         onEnd: () => card.classList.remove("sweep-active"),
         onUpdate: (value) => card.style.setProperty("--edge-proximity", `${value}`),
         start: 100
@@ -243,7 +261,15 @@ export function BorderGlow({
   } as CSSProperties;
 
   return (
-    <div className={`border-glow-card ${className}`} onPointerMove={handlePointerMove} ref={cardRef} style={style}>
+    <div
+      className={`border-glow-card ${className}`}
+      onMouseLeave={handlePointerLeave}
+      onMouseMove={handlePointerMove}
+      onPointerLeave={handlePointerLeave}
+      onPointerMove={handlePointerMove}
+      ref={cardRef}
+      style={style}
+    >
       <span className="edge-light" />
       <div className="border-glow-inner">{children}</div>
     </div>
