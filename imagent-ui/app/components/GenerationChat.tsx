@@ -649,6 +649,12 @@ export function GenerationChat() {
                 placeholder="Describe the image you want the agent to plan and generate"
                 rows={8}
                 onKeyDown={(event) => {
+                  // Ignore Enter while an IME composition is active so confirming a
+                  // candidate (CJK and other composed input) does not submit the prompt
+                  // and discard the text still being composed.
+                  if (event.nativeEvent.isComposing || event.keyCode === 229) {
+                    return;
+                  }
                   if (event.key === "Enter" && !event.shiftKey) {
                     event.preventDefault();
                     event.currentTarget.form?.requestSubmit();
