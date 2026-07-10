@@ -207,11 +207,11 @@ export function GenerationChat() {
       quality: isQualityOption(savedSettings.quality) ? savedSettings.quality : defaultSettings.quality
     };
     const initialSessions = savedSessions.length ? savedSessions : [newSession()];
-    const savedActive = localStorage.getItem(ACTIVE_SESSION_KEY);
+    const savedActive = readStorage(ACTIVE_SESSION_KEY);
     const activeId = savedActive && initialSessions.some((session) => session.id === savedActive)
       ? savedActive
       : initialSessions[0].id;
-    localStorage.removeItem(LEGACY_VERIFICATION_CACHE_KEY);
+    removeStorage(LEGACY_VERIFICATION_CACHE_KEY);
     setSessions(initialSessions);
     setActiveSessionId(activeId);
     setSettings(initialSettings);
@@ -221,13 +221,13 @@ export function GenerationChat() {
 
   useEffect(() => {
     if (sessions.length) {
-      localStorage.setItem(SESSIONS_KEY, JSON.stringify(sessions));
+      writeStorage(SESSIONS_KEY, JSON.stringify(sessions));
     }
   }, [sessions]);
 
   useEffect(() => {
     if (activeSessionId) {
-      localStorage.setItem(ACTIVE_SESSION_KEY, activeSessionId);
+      writeStorage(ACTIVE_SESSION_KEY, activeSessionId);
     }
   }, [activeSessionId]);
 
@@ -311,7 +311,7 @@ export function GenerationChat() {
       model: settings.model,
       quality: settings.quality
     };
-    localStorage.setItem(SETTINGS_KEY, JSON.stringify(persistedSettings));
+    writeStorage(SETTINGS_KEY, JSON.stringify(persistedSettings));
   }, [settings.model, settings.quality]);
 
   useEffect(() => {
@@ -1157,9 +1157,35 @@ function isQualityOption(value: unknown): value is string {
   return typeof value === "string" && qualityOptions.includes(value);
 }
 
+function readStorage(key: string): string | null {
+  try {
+    return localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+function writeStorage(key: string, value: string): void {
+  try {
+    localStorage.setItem(key, value);
+  } catch {
+    // Persistence is best-effort. Swallow environments where storage is
+    // unavailable or full (Safari private mode, exhausted quota, or blocked
+    // site data) so a failed write never crashes the generation UI.
+  }
+}
+
+function removeStorage(key: string): void {
+  try {
+    localStorage.removeItem(key);
+  } catch {
+    // Ignore storage access errors; see writeStorage.
+  }
+}
+
 function readJson<T>(key: string, fallback: T): T {
   try {
-    const raw = localStorage.getItem(key);
+    const raw = readStorage(key);
     return raw ? (JSON.parse(raw) as T) : fallback;
   } catch {
     return fallback;
