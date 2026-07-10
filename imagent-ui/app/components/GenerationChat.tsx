@@ -1,47 +1,33 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import { FormEvent, MouseEvent, useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import {
-  AlertCircle,
+  AlertTriangle,
   Check,
   ChevronDown,
-  Download,
-  FileJson,
   KeyRound,
   Loader2,
-  MessageSquarePlus,
-  RadioTower,
+  MessageCirclePlus,
+  MessageSquareText,
+  PanelLeftClose,
+  PanelLeftOpen,
+  Pencil,
   Send,
   Settings,
   Sparkles,
+  Trash2,
   X
 } from "lucide-react";
 import { EffectCard, LandingBackgroundFx } from "@/app/components/EffectCard";
 import { ScrollReveal } from "@/app/components/ScrollReveal";
-import {
-  IMAGENT_GENERATION_MODEL_ID,
-  IMAGENT_GENERATION_MODEL_OPTION
-} from "@/lib/models";
+import { IMAGENT_GENERATION_MODEL_NAME } from "@/lib/models";
 
 type ChatMessage = {
   id: string;
-  role: "user" | "agent";
+  role: "user" | "assistant";
   content: string;
-  imageUrl?: string;
-  imageFileName?: string;
-  traceUrl?: string;
-  provider?: string;
-  agentId?: string;
-  capability?: string;
-  candidateCount?: number;
-  roundCount?: number;
-  selectedCandidateIndex?: number;
-  model?: string;
-  quality?: string;
-  costUsd?: number;
-  latencyMs?: number;
-  error?: string;
+  createdAt: string;
 };
 
 type ChatSession = {
@@ -52,57 +38,17 @@ type ChatSession = {
   messages: ChatMessage[];
 };
 
-type PlaygroundSettings = {
-  apiKey: string;
-  model: string;
-  quality: string;
-};
+type ModalState =
+  | { type: "settings" }
+  | { type: "edit"; sessionId: string }
+  | { type: "delete"; sessionId: string }
+  | null;
 
-type SavedPlaygroundSettings = Omit<PlaygroundSettings, "apiKey">;
+type ApiKeyVerificationStatus = "idle" | "verifying" | "valid" | "invalid";
 
-type OpenRouterModelOption = {
-  id: string;
-  name: string;
-  description: string;
-  pricing: string;
-};
-
-type VerificationStatus = "idle" | "verifying" | "valid" | "invalid";
-
-type VerificationState = {
-  status: VerificationStatus;
+type ApiKeyVerification = {
+  status: ApiKeyVerificationStatus;
   message: string;
-  models: OpenRouterModelOption[];
-};
-
-type VerificationCache = {
-  cacheKey: string;
-  message: string;
-  models: OpenRouterModelOption[];
-  verifiedAt: string;
-};
-
-type RuntimeStatusResponse = {
-  ready: boolean;
-  hasServerApiKey: boolean;
-  issues: string[];
-};
-
-type GenerateResponse = {
-  runId?: string;
-  imageUrl?: string;
-  imageFileName?: string;
-  provider?: string;
-  agentId?: string;
-  capability?: string;
-  candidateCount?: number;
-  roundCount?: number;
-  selectedCandidateIndex?: number;
-  traceUrl?: string;
-  model?: string;
-  costUsd?: number;
-  latencyMs?: number;
-  error?: string;
 };
 
 type VerifyResponse = {
@@ -111,112 +57,63 @@ type VerifyResponse = {
     label?: string;
     limit_remaining?: number | null;
   } | null;
-  models?: OpenRouterModelOption[];
-  usingServerKey?: boolean;
   warning?: string;
   error?: string;
 };
 
 const SESSIONS_KEY = "imagent.chatSessions";
 const ACTIVE_SESSION_KEY = "imagent.activeSession";
-const SETTINGS_KEY = "imagent.settings";
-const LEGACY_VERIFICATION_CACHE_KEY = "imagent.openrouterVerification";
+const SETTINGS_KEY = "imagent.generationSettings";
+const levelOptions = ["auto", "low", "medium", "high"];
 
-const defaultSettings: PlaygroundSettings = {
-  apiKey: "",
-  model: IMAGENT_GENERATION_MODEL_ID,
-  quality: "auto"
-};
-
-const defaultSavedSettings: SavedPlaygroundSettings = {
-  model: defaultSettings.model,
-  quality: defaultSettings.quality
-};
-
-const fallbackModelOptions: OpenRouterModelOption[] = [
-  {
-    ...IMAGENT_GENERATION_MODEL_OPTION,
-    pricing: "pricing loads after verification"
-  }
+const templatePrompts = [
+  "Plan a cinematic product launch visual for an AI image agent.",
+  "Create a benchmark report graphic with a strong winner signal.",
+  "Draft a visual direction for a Gittensor miner dashboard.",
+  "Design an image prompt for explaining automated PR evaluation."
 ];
 
-const qualityOptions = ["auto", "low", "medium", "high"];
-
-const emptyVerification: VerificationState = {
-  status: "idle",
-  message: "",
-  models: []
+const emptySession: ChatSession = {
+  id: "new-session",
+  title: "New Session",
+  createdAt: "",
+  updatedAt: "",
+  messages: []
 };
-
-const starterPrompts = [
-  "Create a cinematic square poster for an open-source image agent leaderboard.",
-  "Design a clean benchmark pass badge with a green check mark.",
-  "Generate a product card for a miner contribution dashboard.",
-  "Make a polished visual explaining PR benchmark automation."
-];
-
-const modalFocusableSelector = [
-  "a[href]",
-  "button:not([disabled])",
-  "input:not([disabled])",
-  "select:not([disabled])",
-  "textarea:not([disabled])",
-  "[tabindex]:not([tabindex='-1'])"
-].join(",");
 
 export function GenerationChat() {
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [activeSessionId, setActiveSessionId] = useState("");
-  const [settings, setSettings] = useState<PlaygroundSettings>(defaultSettings);
-  const [draftSettings, setDraftSettings] = useState<PlaygroundSettings>(defaultSettings);
-  const [availableModels, setAvailableModels] = useState<OpenRouterModelOption[]>(fallbackModelOptions);
-  const [verification, setVerification] = useState<VerificationState>(emptyVerification);
-  const [verificationCache, setVerificationCache] = useState<VerificationCache | null>(null);
-  const [runtimeStatus, setRuntimeStatus] = useState<RuntimeStatusResponse | null>(null);
-  const [runtimeError, setRuntimeError] = useState("");
-  const [settingsOpen, setSettingsOpen] = useState(false);
-  const [openDropdown, setOpenDropdown] = useState<"composer-model" | "composer-quality" | null>(null);
   const [prompt, setPrompt] = useState("");
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [isMounted, setIsMounted] = useState(false);
-  const committedSettingsRef = useRef(settings);
-  const settingsButtonRef = useRef<HTMLButtonElement | null>(null);
-  const settingsCloseButtonRef = useRef<HTMLButtonElement | null>(null);
-  const settingsModalRef = useRef<HTMLElement | null>(null);
-  const settingsTriggerRef = useRef<HTMLElement | null>(null);
-
-  async function loadRuntimeStatus() {
-    try {
-      const response = await fetch("/api/playground/status", { cache: "no-store" });
-      const data = (await response.json()) as RuntimeStatusResponse;
-      setRuntimeStatus(data);
-      setRuntimeError("");
-    } catch (error) {
-      setRuntimeStatus(null);
-      setRuntimeError(error instanceof Error ? error.message : "Failed to check the Imagent runtime.");
-    }
-  }
+  const [level, setLevel] = useState("auto");
+  const [draftLevel, setDraftLevel] = useState("auto");
+  const [apiKey, setApiKey] = useState("");
+  const [draftApiKey, setDraftApiKey] = useState("");
+  const [apiKeyVerification, setApiKeyVerification] = useState<ApiKeyVerification>({
+    status: "idle",
+    message: "Enter key"
+  });
+  const [modal, setModal] = useState<ModalState>(null);
+  const [draftTitle, setDraftTitle] = useState("");
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [levelMenuOpen, setLevelMenuOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    setIsMounted(true);
+    setMounted(true);
     const savedSessions = sanitizeSessions(readJson<ChatSession[]>(SESSIONS_KEY, []));
-    const savedSettings = readJson<Partial<SavedPlaygroundSettings>>(SETTINGS_KEY, defaultSavedSettings);
-    const initialSettings = {
-      ...defaultSettings,
-      model: defaultSettings.model,
-      quality: isQualityOption(savedSettings.quality) ? savedSettings.quality : defaultSettings.quality
-    };
+    const savedSettings = readJson<{ level?: string }>(SETTINGS_KEY, {});
     const initialSessions = savedSessions.length ? savedSessions : [newSession()];
     const savedActive = localStorage.getItem(ACTIVE_SESSION_KEY);
     const activeId = savedActive && initialSessions.some((session) => session.id === savedActive)
       ? savedActive
       : initialSessions[0].id;
-    localStorage.removeItem(LEGACY_VERIFICATION_CACHE_KEY);
+    const initialLevel = isLevelOption(savedSettings.level) ? savedSettings.level : "auto";
+
     setSessions(initialSessions);
     setActiveSessionId(activeId);
-    setSettings(initialSettings);
-    setDraftSettings(initialSettings);
-    void loadRuntimeStatus();
+    setLevel(initialLevel);
+    setDraftLevel(initialLevel);
   }, []);
 
   useEffect(() => {
@@ -232,337 +129,143 @@ export function GenerationChat() {
   }, [activeSessionId]);
 
   useEffect(() => {
-    committedSettingsRef.current = settings;
-  }, [settings]);
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify({ level }));
+  }, [level]);
 
   useEffect(() => {
-    if (!settingsOpen) {
+    if (!modal) {
       return;
     }
 
     const previousOverflow = document.body.style.overflow;
-    const fallbackSettingsButton = settingsButtonRef.current;
-    const focusTimer = window.setTimeout(() => {
-      const focusTarget = settingsCloseButtonRef.current || firstFocusableElement(settingsModalRef.current) || settingsModalRef.current;
-      focusTarget?.focus({ preventScroll: true });
-    }, 0);
-
     document.body.style.overflow = "hidden";
 
-    function handleModalKeyDown(event: KeyboardEvent) {
+    function handleKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") {
-        event.preventDefault();
-        setDraftSettings(committedSettingsRef.current);
-        setOpenDropdown(null);
-        setSettingsOpen(false);
-        return;
-      }
-
-      if (event.key !== "Tab") {
-        return;
-      }
-
-      const modal = settingsModalRef.current;
-      if (!modal) {
-        return;
-      }
-
-      const focusableElements = getFocusableElements(modal);
-      if (!focusableElements.length) {
-        event.preventDefault();
-        modal.focus({ preventScroll: true });
-        return;
-      }
-
-      const firstElement = focusableElements[0];
-      const lastElement = focusableElements[focusableElements.length - 1];
-      const activeElement = document.activeElement;
-      if (event.shiftKey) {
-        if (!modal.contains(activeElement) || activeElement === firstElement) {
-          event.preventDefault();
-          lastElement.focus({ preventScroll: true });
-        }
-        return;
-      }
-
-      if (!modal.contains(activeElement) || activeElement === lastElement) {
-        event.preventDefault();
-        firstElement.focus({ preventScroll: true });
+        closeModal();
       }
     }
 
-    window.addEventListener("keydown", handleModalKeyDown);
+    window.addEventListener("keydown", handleKeyDown);
     return () => {
-      window.clearTimeout(focusTimer);
       document.body.style.overflow = previousOverflow;
-      window.removeEventListener("keydown", handleModalKeyDown);
-      const trigger = settingsTriggerRef.current?.isConnected
-        ? settingsTriggerRef.current
-        : fallbackSettingsButton;
-      if (trigger?.isConnected) {
-        trigger.focus({ preventScroll: true });
-      }
-      settingsTriggerRef.current = null;
+      window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [settingsOpen]);
+  }, [modal]);
 
   useEffect(() => {
-    const persistedSettings: SavedPlaygroundSettings = {
-      model: settings.model,
-      quality: settings.quality
-    };
-    localStorage.setItem(SETTINGS_KEY, JSON.stringify(persistedSettings));
-  }, [settings.model, settings.quality]);
-
-  useEffect(() => {
-    if (!settingsOpen) {
+    if (modal?.type !== "settings") {
       return;
     }
 
-    const apiKey = draftSettings.apiKey.trim();
-    const cacheKey = apiKey ? `browser:${apiKey}` : runtimeStatus?.hasServerApiKey ? "server" : "";
-    if (!cacheKey) {
-      setVerification(emptyVerification);
-      return;
-    }
-
-    if (isUsableVerificationCache(verificationCache, cacheKey)) {
-      setAvailableModels(verificationCache.models);
-      setVerification({
-        status: "valid",
-        message: verificationCache.message || "Verified",
-        models: verificationCache.models
-      });
+    const key = draftApiKey.trim();
+    if (!key) {
+      setApiKeyVerification({ status: "idle", message: "Enter key" });
       return;
     }
 
     const controller = new AbortController();
-    const timeout = window.setTimeout(async () => {
-      setVerification({ status: "verifying", message: "Checking key", models: [] });
+    setApiKeyVerification({ status: "verifying", message: "Checking" });
+
+    const verifyTimer = window.setTimeout(async () => {
       try {
         const response = await fetch("/api/openrouter/verify", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(apiKey ? { apiKey } : {}),
+          body: JSON.stringify({ apiKey: key }),
           signal: controller.signal
         });
         const data = (await response.json()) as VerifyResponse;
-        if (!response.ok || data.error) {
+
+        if (!response.ok || data.error || !data.verified) {
           throw new Error(data.error || `Verification failed with HTTP ${response.status}`);
         }
 
-        const models = fixedModelOptions(data.models);
-        const message = data.warning || (data.usingServerKey ? "Verified with the server key" : "Verified");
-        const nextCache = {
-          cacheKey,
-          message,
-          models,
-          verifiedAt: new Date().toISOString()
-        };
-        setAvailableModels(models);
-        setVerificationCache(nextCache);
-        setVerification({
+        setApiKeyVerification({
           status: "valid",
-          message,
-          models
-        });
-        setDraftSettings((current) => {
-          const currentApiKey = current.apiKey.trim();
-          if ((apiKey && currentApiKey !== apiKey) || (!apiKey && currentApiKey)) {
-            return current;
-          }
-          return { ...current, model: IMAGENT_GENERATION_MODEL_ID };
+          message: data.warning || data.key?.label || "Verified"
         });
       } catch (error) {
         if (controller.signal.aborted) {
           return;
         }
-        setVerification({
+        setApiKeyVerification({
           status: "invalid",
-          message: error instanceof Error ? error.message : "Verification failed",
-          models: []
+          message: error instanceof Error ? error.message : "Invalid key"
         });
       }
-    }, 500);
+    }, 650);
 
     return () => {
       controller.abort();
-      window.clearTimeout(timeout);
+      window.clearTimeout(verifyTimer);
     };
-  }, [draftSettings.apiKey, runtimeStatus?.hasServerApiKey, settingsOpen, verificationCache]);
+  }, [draftApiKey, modal]);
 
-  const activeSession = sessions.find((session) => session.id === activeSessionId) || sessions[0];
-  const hasServerApiKey = Boolean(runtimeStatus?.hasServerApiKey);
-  const runtimeReady = Boolean(runtimeStatus?.ready);
-  const hasConfiguredOpenRouter = hasServerApiKey || settings.apiKey.trim().length > 0;
-  const draftApiKey = draftSettings.apiKey.trim();
-  const draftUsesServerKey = !draftApiKey && hasServerApiKey;
-  const keyModeLabel = draftApiKey ? "Browser key" : hasServerApiKey ? "Server key" : "Key needed";
-  const apiKeyControlClass = verification.status === "idle" ? "api-key-control" : `api-key-control has-status ${verification.status}`;
-  const modelChoices = verification.models.length ? verification.models : availableModels;
-  const canSaveSettings = (!draftApiKey && !draftUsesServerKey) || verification.status === "valid";
-  const settingsModelOption = modelChoices.find((model) => model.id === IMAGENT_GENERATION_MODEL_ID) || fallbackModelOptions[0];
-  const composerModelChoices = availableModels.length ? availableModels : fallbackModelOptions;
-  const selectedComposerModel = composerModelChoices.find((model) => model.id === settings.model);
-  const canSubmit = useMemo(() => prompt.trim().length > 0 && !isGenerating && runtimeReady, [prompt, isGenerating, runtimeReady]);
-  const canCreateNewSession = !activeSession || activeSession.messages.length > 0 || prompt.trim().length > 0;
-  const activeMessages = activeSession?.messages || [];
-  const latestAgentMessage = [...activeMessages].reverse().find((message) => message.role === "agent");
-  const latestUserMessage = [...activeMessages].reverse().find((message) => message.role === "user");
-  const runtimeState = !runtimeStatus && !runtimeError ? "checking" : runtimeReady ? "ready" : "blocked";
-  const latestMetaItems: string[] = [];
-
-  if (latestAgentMessage?.agentId) {
-    latestMetaItems.push(latestAgentMessage.agentId);
-  }
-  if (latestAgentMessage?.capability) {
-    latestMetaItems.push(latestAgentMessage.capability);
-  }
-  if (latestAgentMessage) {
-    latestMetaItems.push(latestAgentMessage.model || settings.model);
-  }
-  if (latestAgentMessage?.quality) {
-    latestMetaItems.push(latestAgentMessage.quality);
-  }
-  if (typeof latestAgentMessage?.candidateCount === "number" && latestAgentMessage.candidateCount > 0) {
-    latestMetaItems.push(`${latestAgentMessage.candidateCount} candidates`);
-  }
-  if (typeof latestAgentMessage?.roundCount === "number" && latestAgentMessage.roundCount > 0) {
-    latestMetaItems.push(`${latestAgentMessage.roundCount} rounds`);
-  }
-  if (typeof latestAgentMessage?.latencyMs === "number") {
-    latestMetaItems.push(`${latestAgentMessage.latencyMs.toFixed(0)} ms`);
-  }
-  if (typeof latestAgentMessage?.costUsd === "number") {
-    latestMetaItems.push(`$${latestAgentMessage.costUsd.toFixed(6)}`);
-  }
+  const activeSession = useMemo(
+    () => sessions.find((session) => session.id === activeSessionId) || sessions[0] || emptySession,
+    [activeSessionId, sessions]
+  );
+  const visibleSessions = sessions.length ? sessions : [emptySession];
+  const hasMessages = Boolean(activeSession?.messages.length);
+  const canSend = prompt.trim().length > 0;
+  const modalSession = modal && "sessionId" in modal
+    ? sessions.find((session) => session.id === modal.sessionId)
+    : null;
 
   function createSession() {
-    if (!canCreateNewSession && activeSession) {
-      setActiveSessionId(activeSession.id);
-      return;
-    }
-
     const session = newSession();
     setSessions((current) => [session, ...current]);
     setActiveSessionId(session.id);
     setPrompt("");
+    setSidebarCollapsed(false);
   }
 
-  function saveSettings() {
-    const nextSettings = {
-      apiKey: draftSettings.apiKey.trim(),
-      model: IMAGENT_GENERATION_MODEL_ID,
-      quality: draftSettings.quality
-    };
-    if (!nextSettings.apiKey && !hasServerApiKey) {
-      setVerification(emptyVerification);
-      setVerificationCache(null);
-    }
-    setSettings(nextSettings);
-    setOpenDropdown(null);
-    setSettingsOpen(false);
-  }
-
-  function openSettings() {
-    const activeElement = document.activeElement;
-    settingsTriggerRef.current = activeElement instanceof HTMLElement && activeElement !== document.body
-      ? activeElement
-      : settingsButtonRef.current;
-    setDraftSettings(settings);
-    setOpenDropdown(null);
-    setSettingsOpen(true);
-    void loadRuntimeStatus();
-  }
-
-  function cancelSettings() {
-    setDraftSettings(settings);
-    setOpenDropdown(null);
-    setSettingsOpen(false);
-  }
-
-  function updateComposerModel(model: string) {
-    setSettings((current) => ({...current, model: model === IMAGENT_GENERATION_MODEL_ID ? model : IMAGENT_GENERATION_MODEL_ID}));
-    setOpenDropdown(null);
-  }
-
-  function updateComposerQuality(quality: string) {
-    setSettings((current) => ({...current, quality}));
-    setOpenDropdown(null);
-  }
-
-  async function submit(event: FormEvent<HTMLFormElement>) {
+  function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!canSubmit || !activeSession) {
-      return;
-    }
-    if (!runtimeReady || !hasConfiguredOpenRouter) {
-      openSettings();
+    sendPrompt(prompt);
+  }
+
+  function selectTemplate(template: string) {
+    sendPrompt(template);
+  }
+
+  function sendPrompt(value: string) {
+    const content = value.trim();
+    if (!content) {
       return;
     }
 
-    const userPrompt = prompt.trim();
+    const now = new Date().toISOString();
+    const sessionId = sessions.length ? activeSession.id : crypto.randomUUID();
     const userMessage: ChatMessage = {
       id: crypto.randomUUID(),
       role: "user",
-      content: userPrompt
+      content,
+      createdAt: now
+    };
+    const assistantMessage: ChatMessage = {
+      id: crypto.randomUUID(),
+      role: "assistant",
+      content: "Agenda received. I will keep this session focused around that direction.",
+      createdAt: now
     };
 
-    updateSession(activeSession.id, [userMessage], titleFromPrompt(userPrompt));
-    setPrompt("");
-    setIsGenerating(true);
-
-    try {
-      const response = await fetch("/api/playground/generate", {
-        method: "POST",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({
-          prompt: userPrompt,
-          apiKey: settings.apiKey.trim() || undefined,
-          quality: settings.quality
-        })
-      });
-      const data = (await response.json()) as GenerateResponse;
-      if (!response.ok || data.error) {
-        throw new Error(data.error || `Generation failed with HTTP ${response.status}`);
-      }
-      updateSession(activeSession.id, [
+    if (!sessions.length) {
+      setSessions([
         {
-          id: crypto.randomUUID(),
-          role: "agent",
-          content: "Generated with Imagent",
-          imageUrl: data.imageUrl,
-          imageFileName: data.imageFileName,
-          traceUrl: data.traceUrl,
-          provider: data.provider,
-          agentId: data.agentId,
-          capability: data.capability,
-          candidateCount: data.candidateCount,
-          roundCount: data.roundCount,
-          selectedCandidateIndex: data.selectedCandidateIndex,
-          model: data.model,
-          quality: settings.quality,
-          costUsd: data.costUsd,
-          latencyMs: data.latencyMs
+          id: sessionId,
+          title: titleFromPrompt(content),
+          createdAt: now,
+          updatedAt: now,
+          messages: [userMessage, assistantMessage]
         }
       ]);
-    } catch (error) {
-      updateSession(activeSession.id, [
-        {
-          id: crypto.randomUUID(),
-          role: "agent",
-          content: "Imagent generation failed",
-          error: error instanceof Error ? error.message : "Unknown generation error",
-          model: settings.model
-        }
-      ]);
-      void loadRuntimeStatus();
-    } finally {
-      setIsGenerating(false);
+      setActiveSessionId(sessionId);
+      setPrompt("");
+      return;
     }
-  }
 
-  function updateSession(sessionId: string, appendedMessages: ChatMessage[], nextTitle?: string) {
     setSessions((current) =>
       current.map((session) => {
         if (session.id !== sessionId) {
@@ -570,591 +273,451 @@ export function GenerationChat() {
         }
         return {
           ...session,
-          title: session.title === "New chat" && nextTitle ? nextTitle : session.title,
-          updatedAt: new Date().toISOString(),
-          messages: [...session.messages, ...appendedMessages]
+          title: session.title === "New Session" ? titleFromPrompt(content) : session.title,
+          updatedAt: now,
+          messages: [...session.messages, userMessage, assistantMessage]
         };
       })
     );
+    setPrompt("");
+  }
+
+  function openSettings() {
+    setDraftLevel(level);
+    setDraftApiKey(apiKey);
+    setModal({ type: "settings" });
+  }
+
+  function updateLevel(value: string) {
+    if (!isLevelOption(value)) {
+      return;
+    }
+    setLevel(value);
+    setDraftLevel(value);
+    setLevelMenuOpen(false);
+  }
+
+  function openEditSession(session: ChatSession, event: MouseEvent<HTMLButtonElement>) {
+    event.stopPropagation();
+    setDraftTitle(session.title);
+    setModal({ type: "edit", sessionId: session.id });
+  }
+
+  function openDeleteSession(session: ChatSession, event: MouseEvent<HTMLButtonElement>) {
+    event.stopPropagation();
+    setModal({ type: "delete", sessionId: session.id });
+  }
+
+  function closeModal() {
+    setModal(null);
+    setDraftTitle("");
+  }
+
+  function saveSettings(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setLevel(draftLevel);
+    setApiKey(draftApiKey.trim());
+    closeModal();
+  }
+
+  function saveSessionTitle(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!modal || modal.type !== "edit") {
+      return;
+    }
+
+    const nextTitle = draftTitle.replace(/\s+/g, " ").trim() || "New Session";
+    setSessions((current) =>
+      current.map((session) =>
+        session.id === modal.sessionId
+          ? { ...session, title: titleFromPrompt(nextTitle), updatedAt: new Date().toISOString() }
+          : session
+      )
+    );
+    closeModal();
+  }
+
+  function deleteSession() {
+    if (!modal || modal.type !== "delete") {
+      return;
+    }
+
+    const remainingSessions = sessions.filter((session) => session.id !== modal.sessionId);
+    if (!remainingSessions.length) {
+      const replacement = newSession();
+      setSessions([replacement]);
+      setActiveSessionId(replacement.id);
+      closeModal();
+      return;
+    }
+
+    setSessions(remainingSessions);
+    if (!remainingSessions.some((session) => session.id === activeSessionId)) {
+      setActiveSessionId(remainingSessions[0].id);
+    }
+    closeModal();
+  }
+
+  function handleBackdropMouseDown(event: MouseEvent<HTMLDivElement>) {
+    if (event.target === event.currentTarget) {
+      closeModal();
+    }
   }
 
   return (
-    <div className="imagent-landing generation-shell">
+    <div className="imagent-landing generation-shell generation-redesign">
       <LandingBackgroundFx />
       <ScrollReveal />
-      <section className="generation-hero" aria-labelledby="generation-title" data-reveal="fade-up">
-        <div className="generation-hero-copy">
-          <span className="generation-kicker">
-            <Sparkles size={14} />
-            Image Agent Console
-          </span>
-          <h1 id="generation-title" aria-label="Generate With The Current Agent">
-            <span>Generate With</span>
-            <span>The Current</span>
-            <span>Agent</span>
-          </h1>
-          <p>
-            Write one prompt and let Imagent call the fixed OpenRouter image model through the current agent runtime.
-          </p>
-          <div className="generation-status-row" aria-label="Generation status">
-            <span className={`generation-status-pill ${runtimeState}`}>
-              <span className="generation-status-dot" />
-              {runtimeState === "checking" ? "Checking Runtime" : runtimeReady ? "Runtime Ready" : "Runtime Blocked"}
-            </span>
-            <span className={`generation-status-pill ${hasConfiguredOpenRouter ? "ready" : "warning"}`}>
-              <KeyRound size={14} />
-              {hasConfiguredOpenRouter ? "OpenRouter Ready" : "OpenRouter Needed"}
-            </span>
-            <span className="generation-status-pill">
-              <RadioTower size={14} />
-              Gittensor Powered
-            </span>
-          </div>
-        </div>
-        <button className="generation-settings-button" type="button" onClick={openSettings} ref={settingsButtonRef}>
-          <Settings size={17} />
-          Settings
-        </button>
-      </section>
 
-      <section className="generation-workspace" aria-label="Generation workspace">
-        <div className="generation-panel generation-prompt-panel">
-          <div className="generation-panel-head">
-            <div>
-              <span>Prompt</span>
-              <strong>{activeSession?.title || "New Run"}</strong>
+      <main
+        className={sidebarCollapsed ? "generation-chat-layout session-collapsed" : "generation-chat-layout"}
+        aria-label="Generation session workspace"
+      >
+        <div className="generation-workspace-surface">
+          <aside className={sidebarCollapsed ? "generation-session-panel collapsed" : "generation-session-panel"} aria-label="Session history">
+            <div className="generation-session-header">
+              <button
+                className="generation-icon-button"
+                type="button"
+                aria-label={sidebarCollapsed ? "Expand sessions" : "Collapse sessions"}
+                title={sidebarCollapsed ? "Expand sessions" : "Collapse sessions"}
+                onClick={() => setSidebarCollapsed((current) => !current)}
+              >
+                {sidebarCollapsed ? <PanelLeftOpen size={19} /> : <PanelLeftClose size={19} />}
+              </button>
+              {sidebarCollapsed ? null : <span>Sessions</span>}
+              <button
+                className="generation-icon-button primary"
+                type="button"
+                aria-label="New session"
+                title="New session"
+                onClick={createSession}
+              >
+                <MessageCirclePlus size={21} />
+              </button>
             </div>
-            <button className="generation-new-run" type="button" onClick={createSession} disabled={!canCreateNewSession}>
-              <MessageSquarePlus size={16} />
-              New Run
-            </button>
-          </div>
 
-          <div className="generation-model-card">
-            <div>
-              <span>
-                <Sparkles size={15} />
-                Model
-              </span>
-              <strong>{selectedComposerModel?.name || labelForModel(settings.model, composerModelChoices)}</strong>
-            </div>
-            <small>Fixed through OpenRouter so agent logic is the variable.</small>
-          </div>
-
-          <div className="generation-composer-wrap">
-            <form className="generation-composer" onSubmit={submit}>
-              <textarea
-                value={prompt}
-                onChange={(event) => setPrompt(event.target.value)}
-                placeholder="Describe the image you want the agent to plan and generate"
-                rows={8}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter" && !event.shiftKey) {
-                    event.preventDefault();
-                    event.currentTarget.form?.requestSubmit();
-                  }
-                }}
-              />
-              <div className="composer-toolbar">
-                <div className="generation-composer-controls">
-                  {hasConfiguredOpenRouter ? (
-                    <>
-                      <ModelDropdown
-                        hideLabel
-                        id="composer-model"
-                        label="Model"
-                        models={composerModelChoices}
-                        open={openDropdown === "composer-model"}
-                        selectedModel={settings.model}
-                        selectedModelName={selectedComposerModel?.name || labelForModel(settings.model, composerModelChoices)}
-                        onOpenChange={(open) => setOpenDropdown(open ? "composer-model" : null)}
-                        onSelect={updateComposerModel}
-                      />
-                      <QualityDropdown
-                        hideLabel
-                        open={openDropdown === "composer-quality"}
-                        selectedQuality={settings.quality}
-                        onOpenChange={(open) => setOpenDropdown(open ? "composer-quality" : null)}
-                        onSelect={updateComposerQuality}
-                      />
-                    </>
-                  ) : (
-                    <button className="composer-configure-button" type="button" onClick={openSettings}>
-                      <KeyRound size={15} />
-                      Configure OpenRouter
-                    </button>
-                  )}
-                </div>
-                <button className="composer-send-button" type="submit" disabled={!canSubmit} aria-label="Generate image">
-                  {isGenerating ? (
-                    <>
-                      <Loader2 className="spin" size={16} />
-                      Running
-                    </>
-                  ) : (
-                    <>
-                      <Send size={16} />
-                      Generate
-                    </>
-                  )}
-                </button>
-              </div>
-            </form>
-          </div>
-
-          <div className="generation-suggestions">
-            <div className="generation-suggestions-head">
-              <span>Starter Prompts</span>
-              <small>Click to fill</small>
-            </div>
-            <div className="prompt-suggestions">
-              {starterPrompts.map((item) => (
-                <button type="button" key={item} onClick={() => setPrompt(item)}>
-                  {item}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        <div className="generation-panel generation-preview-panel">
-          <div className="generation-panel-head">
-            <div>
-              <span>Preview</span>
-              <strong>Latest Agent Output</strong>
-            </div>
-            <span className={isGenerating ? "generation-preview-badge running" : "generation-preview-badge"}>
-              {isGenerating ? "Running" : latestAgentMessage?.imageUrl ? "Ready" : "Waiting"}
-            </span>
-          </div>
-
-          <div className="generation-preview-surface">
-            {isGenerating ? (
-              <div className="generation-preview-state generation-preview-loading">
-                <Loader2 className="spin" size={30} />
-                <strong>Agent Is Generating</strong>
-                <p>Planning the prompt and calling the OpenRouter image model.</p>
-              </div>
-            ) : latestAgentMessage?.imageUrl ? (
-              <div className="generation-preview-result">
-                <div className="generation-preview-image">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={latestAgentMessage.imageUrl} alt="Generated image" />
-                </div>
-                {latestUserMessage ? (
-                  <div className="generation-latest-prompt">
-                    <span>Prompt</span>
-                    <p>{latestUserMessage.content}</p>
-                  </div>
-                ) : null}
-                <div className="generation-preview-actions">
-                  <a href={latestAgentMessage.imageUrl} download={latestAgentMessage.imageFileName || "imagent-output.png"}>
-                    <Download size={15} />
-                    Download Image
-                  </a>
-                  {latestAgentMessage.traceUrl ? (
-                    <a href={latestAgentMessage.traceUrl} target="_blank" rel="noreferrer">
-                      <FileJson size={15} />
-                      View Trace
-                    </a>
-                  ) : null}
-                </div>
-                {latestMetaItems.length > 0 ? (
-                  <div className="generation-preview-meta">
-                    {latestMetaItems.map((item) => (
-                      <span key={item}>{item}</span>
-                    ))}
-                  </div>
-                ) : null}
-              </div>
-            ) : latestAgentMessage?.error ? (
-              <div className="generation-preview-state generation-preview-error">
-                <AlertCircle size={30} />
-                <strong>Generation Failed</strong>
-                <p>{latestAgentMessage.error}</p>
+            {sidebarCollapsed ? (
+              <div className="generation-session-rail custom-scrollbar">
+                {visibleSessions.map((session) => (
+                  <button
+                    className={session.id === activeSession?.id ? "generation-rail-session active" : "generation-rail-session"}
+                    type="button"
+                    key={session.id}
+                    aria-label={session.title}
+                    title={session.title}
+                    onClick={() => {
+                      if (sessions.length) {
+                        setActiveSessionId(session.id);
+                      }
+                    }}
+                  >
+                    <MessageSquareText size={16} />
+                  </button>
+                ))}
               </div>
             ) : (
-              <div className="generation-preview-state generation-preview-empty">
-                <div className="generation-preview-orb">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src="/brand/imagent-ai-avatar.jpg" alt="" />
-                </div>
-                <strong>Image Preview</strong>
-                <p>Your generated image and trace will appear here after the agent run.</p>
+              <div className="generation-session-list custom-scrollbar">
+                {visibleSessions.map((session) => {
+                  const active = session.id === activeSession?.id;
+                  return (
+                    <div className={active ? "generation-session-item active" : "generation-session-item"} key={session.id}>
+                      <button
+                        className="generation-session-select"
+                        type="button"
+                        onClick={() => {
+                          if (sessions.length) {
+                            setActiveSessionId(session.id);
+                          }
+                        }}
+                      >
+                        <MessageSquareText size={16} />
+                        <span>{session.title}</span>
+                      </button>
+                      {sessions.length ? (
+                        <div className="generation-session-actions" aria-label={`${session.title} actions`}>
+                          <button type="button" aria-label="Edit session title" title="Edit" onClick={(event) => openEditSession(session, event)}>
+                            <Pencil size={14} />
+                          </button>
+                          <button type="button" aria-label="Delete session" title="Delete" onClick={(event) => openDeleteSession(session, event)}>
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      ) : null}
+                    </div>
+                  );
+                })}
               </div>
             )}
-          </div>
-        </div>
-      </section>
+          </aside>
 
-      {settingsOpen && isMounted ? createPortal(
-        <div
-          className="modal-backdrop generation-settings-backdrop"
-          role="presentation"
-          onMouseDown={(event) => {
-            if (event.target === event.currentTarget) {
-              cancelSettings();
-            }
-          }}
-        >
-          <EffectCard animated className="settings-modal-card" glareOpacity={0.12} radius={24}>
-            <section
-              className="settings-modal custom-scrollbar"
-              role="dialog"
-              aria-modal="true"
-              aria-labelledby="settings-title"
-              ref={settingsModalRef}
-              tabIndex={-1}
-            >
-              <header>
-                <div className="settings-title-row">
-                  <span className="settings-title-icon">
-                    <Settings size={18} />
-                  </span>
-                  <div>
-                    <h2 id="settings-title">Generation settings</h2>
-                    <p>OpenRouter-backed image generation</p>
-                  </div>
-                </div>
-                <div className="settings-header-actions">
-                  <span className={`settings-key-pill ${verification.status}`}>
-                    {keyModeLabel}
-                  </span>
-                  <button type="button" onClick={cancelSettings} aria-label="Close settings" ref={settingsCloseButtonRef}>
-                    <X size={18} />
+          <section className="generation-chat-panel" aria-label="Chat">
+            <header className="generation-chat-head">
+              <div className="generation-model-row">
+                <span className="generation-model-pill">
+                  <Sparkles size={15} />
+                  <strong>{IMAGENT_GENERATION_MODEL_NAME}</strong>
+                </span>
+                <div
+                  className={levelMenuOpen ? "generation-level-menu open" : "generation-level-menu"}
+                  onBlur={(event) => {
+                    const nextFocus = event.relatedTarget as Node | null;
+                    if (!event.currentTarget.contains(nextFocus)) {
+                      setLevelMenuOpen(false);
+                    }
+                  }}
+                >
+                  <button
+                    className="generation-level-trigger"
+                    type="button"
+                    aria-haspopup="listbox"
+                    aria-expanded={levelMenuOpen}
+                    onClick={() => setLevelMenuOpen((current) => !current)}
+                  >
+                    <span>{level}</span>
+                    <ChevronDown size={14} aria-hidden="true" />
                   </button>
+                  {levelMenuOpen ? (
+                    <div className="generation-level-menu-list" role="listbox" aria-label="Generation level">
+                      {levelOptions.map((option) => (
+                        <button
+                          className={level === option ? "active" : ""}
+                          type="button"
+                          role="option"
+                          aria-selected={level === option}
+                          key={option}
+                          onClick={() => updateLevel(option)}
+                        >
+                          <span>{option}</span>
+                          {level === option ? <Check size={13} /> : null}
+                        </button>
+                      ))}
+                    </div>
+                  ) : null}
                 </div>
-              </header>
-              <div className="settings-modal-body">
-                <label className="settings-field settings-field--key">
-                  <span>OpenRouter API key</span>
-                  <div className={apiKeyControlClass}>
-                    <KeyRound size={16} />
-                    <input
-                      type="password"
-                      value={draftSettings.apiKey}
-                      onChange={(event) => setDraftSettings({...draftSettings, apiKey: event.target.value})}
-                      placeholder="sk-or-..."
-                      autoComplete="off"
-                    />
-                    <VerificationBadge verification={verification} />
-                  </div>
-                  <small className="field-note">
-                    {hasServerApiKey
-                      ? "Leave blank to use the shared server key, or enter a browser key for this run."
-                      : "Enter an OpenRouter key to generate images from this browser."}
-                  </small>
-                </label>
-                <div className="settings-field">
-                  <span>Image model</span>
-                  <div className="fixed-model-card" aria-label="Fixed image model">
-                    <Sparkles size={16} />
-                    <span>
-                      <strong>{settingsModelOption.name}</strong>
-                      <small>{IMAGENT_GENERATION_MODEL_ID}</small>
-                    </span>
-                    <em>Fixed</em>
-                  </div>
-                  <small className="field-note">
-                    {verification.status === "valid"
-                      ? `${settingsModelOption.pricing || "pricing unavailable"} · fixed project model.`
-                      : "Verify OpenRouter to confirm access and pricing."}
-                  </small>
-                </div>
-                <div className="settings-field">
-                  <span>Quality level</span>
-                  <div className="segmented-control" role="radiogroup" aria-label="Quality level">
-                    {qualityOptions.map((quality) => (
-                      <button
-                        className={draftSettings.quality === quality ? "active" : ""}
-                        type="button"
-                        role="radio"
-                        aria-checked={draftSettings.quality === quality}
-                        key={quality}
-                        onClick={() => setDraftSettings({...draftSettings, quality})}
-                      >
-                        <span className="quality-check" aria-hidden="true">
-                          {draftSettings.quality === quality ? <Check size={13} /> : null}
-                        </span>
-                        <span>{quality}</span>
+              </div>
+              <button
+                className="generation-icon-button generation-settings-trigger"
+                type="button"
+                aria-label="Open generation settings"
+                title="Settings"
+                onClick={openSettings}
+              >
+                <Settings size={17} />
+              </button>
+            </header>
+
+            <div className="generation-chat-history custom-scrollbar">
+              {hasMessages ? (
+                activeSession.messages.map((message) => (
+                  <article className={`generation-message ${message.role}`} key={message.id}>
+                    <span>{message.role === "user" ? "You" : "Imagent"}</span>
+                    <p>{message.content}</p>
+                  </article>
+                ))
+              ) : (
+                <div className="generation-empty-state">
+                  <h1>What&apos;s your agent today?</h1>
+                  <div className="generation-template-grid">
+                    {templatePrompts.map((template) => (
+                      <button type="button" key={template} onClick={() => selectTemplate(template)}>
+                        {template}
                       </button>
                     ))}
                   </div>
                 </div>
+              )}
+            </div>
+
+            <form className="generation-chat-input" onSubmit={submit}>
+              <div className="generation-input-control">
+                <input
+                  value={prompt}
+                  onChange={(event) => setPrompt(event.target.value)}
+                  placeholder="Type your agenda..."
+                  type="text"
+                />
+                <button type="submit" disabled={!canSend} aria-label="Send agenda">
+                  <Send size={17} />
+                </button>
               </div>
-              <footer>
-                <button type="button" className="secondary-button" onClick={cancelSettings}>
-                  Cancel
-                </button>
-                <button type="button" className="primary-button" onClick={saveSettings} disabled={!canSaveSettings}>
-                  Save settings
-                </button>
-              </footer>
-            </section>
-          </EffectCard>
-        </div>,
-        document.body
-      ) : null}
-    </div>
-  );
-}
-
-function ModelDropdown({
-  disabled = false,
-  emptyLabel = "No models loaded",
-  hideLabel = false,
-  id,
-  label,
-  models,
-  onOpenChange,
-  onSelect,
-  open,
-  selectedModel,
-  selectedModelName
-}: {
-  disabled?: boolean;
-  emptyLabel?: string;
-  hideLabel?: boolean;
-  id: string;
-  label: string;
-  models: OpenRouterModelOption[];
-  onOpenChange: (open: boolean) => void;
-  onSelect: (model: string) => void;
-  open: boolean;
-  selectedModel: string;
-  selectedModelName: string;
-}) {
-  const selected = models.find((model) => model.id === selectedModel);
-  const menuId = `${id}-menu`;
-
-  return (
-    <div
-      className={`model-dropdown ${open ? "open" : ""} ${disabled ? "disabled" : ""}`}
-      onBlur={(event) => {
-        const nextFocus = event.relatedTarget as Node | null;
-        if (!event.currentTarget.contains(nextFocus)) {
-          onOpenChange(false);
-        }
-      }}
-      onKeyDown={(event) => {
-        if (event.key === "Escape") {
-          onOpenChange(false);
-        }
-      }}
-    >
-      <button
-        className="model-dropdown-trigger"
-        type="button"
-        disabled={disabled}
-        aria-controls={open ? menuId : undefined}
-        aria-expanded={open}
-        aria-haspopup="listbox"
-        onClick={() => onOpenChange(!open)}
-      >
-        <Sparkles size={15} />
-        <span className="dropdown-copy">
-          {hideLabel ? null : <small>{label}</small>}
-          <strong>{disabled ? emptyLabel : selected?.name || selectedModelName}</strong>
-        </span>
-        <ChevronDown size={15} />
-      </button>
-      {open && !disabled ? (
-        <div className="model-dropdown-menu custom-scrollbar" id={menuId} role="listbox" aria-label={label}>
-          {models.map((model) => {
-            const active = model.id === selectedModel;
-            return (
-              <button
-                className={active ? "active" : ""}
-                type="button"
-                role="option"
-                aria-selected={active}
-                key={model.id}
-                onClick={() => {
-                  onSelect(model.id);
-                  onOpenChange(false);
-                }}
-              >
-                <span>
-                  <strong>{model.name}</strong>
-                  <small>{model.pricing || model.id}</small>
-                </span>
-                {active ? <Check size={15} /> : null}
-              </button>
-            );
-          })}
+            </form>
+          </section>
         </div>
-      ) : null}
+      </main>
+
+      {mounted && modal
+        ? createPortal(
+            <div className="generation-modal-backdrop" role="presentation" onMouseDown={handleBackdropMouseDown}>
+              <EffectCard animated className={`generation-dialog-card${modal.type === "settings" ? " generation-settings-card" : ""}`} glareOpacity={0.16} radius={24}>
+                {modal.type === "settings" ? (
+                  <form className="generation-dialog generation-settings-dialog" role="dialog" aria-modal="true" aria-labelledby="generation-settings-title" onSubmit={saveSettings}>
+                    <header>
+                      <span className="generation-dialog-icon settings">
+                        <Settings size={20} />
+                      </span>
+                      <h2 id="generation-settings-title">Settings</h2>
+                      <button className="generation-dialog-close" type="button" aria-label="Close settings" onClick={closeModal}>
+                        <X size={17} />
+                      </button>
+                    </header>
+                    <div className="generation-dialog-body">
+                      <label className="generation-setting-row generation-api-key-field">
+                        <span>OpenRouter API key</span>
+                        <div className={`generation-api-key-control ${apiKeyVerification.status}`}>
+                          <input
+                            autoComplete="off"
+                            onChange={(event) => setDraftApiKey(event.target.value)}
+                            placeholder="sk-or-v1-..."
+                            spellCheck={false}
+                            type="password"
+                            value={draftApiKey}
+                          />
+                          <span className={`generation-api-key-status ${apiKeyVerification.status}`} aria-live="polite">
+                            {apiKeyVerification.status === "verifying" ? <Loader2 className="spin" size={14} /> : null}
+                            {apiKeyVerification.status === "valid" ? <Check size={14} /> : null}
+                            {apiKeyVerification.status === "invalid" ? <AlertTriangle size={14} /> : null}
+                            {apiKeyVerification.status === "idle" ? <KeyRound size={14} /> : null}
+                            <span>{apiKeyVerification.message}</span>
+                          </span>
+                        </div>
+                      </label>
+                      <div className="generation-setting-row">
+                        <span>Model</span>
+                        <strong>{IMAGENT_GENERATION_MODEL_NAME}</strong>
+                      </div>
+                      <div className="generation-setting-row level">
+                        <span>Level</span>
+                        <div className="generation-level-grid" role="radiogroup" aria-label="Generation level">
+                          {levelOptions.map((option) => (
+                            <button
+                              className={draftLevel === option ? "active" : ""}
+                              type="button"
+                              role="radio"
+                              aria-checked={draftLevel === option}
+                              key={option}
+                              onClick={() => setDraftLevel(option)}
+                            >
+                              <span>{option}</span>
+                              {draftLevel === option ? <Check size={14} /> : null}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                    <footer>
+                      <button className="generation-secondary-action" type="button" onClick={closeModal}>
+                        Cancel
+                      </button>
+                      <button className="generation-primary-action" type="submit">
+                        Save
+                      </button>
+                    </footer>
+                  </form>
+                ) : null}
+
+                {modal.type === "edit" ? (
+                  <form className="generation-dialog" role="dialog" aria-modal="true" aria-labelledby="generation-edit-title" onSubmit={saveSessionTitle}>
+                    <header>
+                      <span className="generation-dialog-icon">
+                        <Pencil size={18} />
+                      </span>
+                      <div>
+                        <h2 id="generation-edit-title">Edit session</h2>
+                        <p>Rename this session in your local history.</p>
+                      </div>
+                      <button className="generation-dialog-close" type="button" aria-label="Close edit dialog" onClick={closeModal}>
+                        <X size={17} />
+                      </button>
+                    </header>
+                    <div className="generation-dialog-body">
+                      <label className="generation-title-field">
+                        <span>Session title</span>
+                        <input
+                          value={draftTitle}
+                          onChange={(event) => setDraftTitle(event.target.value)}
+                          placeholder={modalSession?.title || "New Session"}
+                          autoFocus
+                        />
+                      </label>
+                    </div>
+                    <footer>
+                      <button className="generation-secondary-action" type="button" onClick={closeModal}>
+                        Cancel
+                      </button>
+                      <button className="generation-primary-action" type="submit">
+                        Save
+                      </button>
+                    </footer>
+                  </form>
+                ) : null}
+
+                {modal.type === "delete" ? (
+                  <section className="generation-dialog danger" role="dialog" aria-modal="true" aria-labelledby="generation-delete-title">
+                    <header>
+                      <span className="generation-dialog-icon danger">
+                        <AlertTriangle size={18} />
+                      </span>
+                      <div>
+                        <h2 id="generation-delete-title">Delete session</h2>
+                        <p>{modalSession ? `Delete "${modalSession.title}" from this browser?` : "Delete this session from this browser?"}</p>
+                      </div>
+                      <button className="generation-dialog-close" type="button" aria-label="Close delete dialog" onClick={closeModal}>
+                        <X size={17} />
+                      </button>
+                    </header>
+                    <footer>
+                      <button className="generation-secondary-action" type="button" onClick={closeModal}>
+                        Cancel
+                      </button>
+                      <button className="generation-danger-action" type="button" onClick={deleteSession}>
+                        Delete
+                      </button>
+                    </footer>
+                  </section>
+                ) : null}
+              </EffectCard>
+            </div>,
+            document.body
+          )
+        : null}
     </div>
   );
-}
-
-function QualityDropdown({
-  hideLabel = false,
-  onOpenChange,
-  onSelect,
-  open,
-  selectedQuality
-}: {
-  hideLabel?: boolean;
-  onOpenChange: (open: boolean) => void;
-  onSelect: (quality: string) => void;
-  open: boolean;
-  selectedQuality: string;
-}) {
-  return (
-    <div
-      className={`quality-dropdown ${open ? "open" : ""}`}
-      onBlur={(event) => {
-        const nextFocus = event.relatedTarget as Node | null;
-        if (!event.currentTarget.contains(nextFocus)) {
-          onOpenChange(false);
-        }
-      }}
-      onKeyDown={(event) => {
-        if (event.key === "Escape") {
-          onOpenChange(false);
-        }
-      }}
-    >
-      <button
-        className="quality-dropdown-trigger"
-        type="button"
-        aria-expanded={open}
-        aria-haspopup="listbox"
-        onClick={() => onOpenChange(!open)}
-      >
-        <span className="dropdown-copy">
-          {hideLabel ? null : <small>Level</small>}
-          <strong>{selectedQuality}</strong>
-        </span>
-        <ChevronDown size={15} />
-      </button>
-      {open ? (
-        <div className="quality-dropdown-menu" role="listbox" aria-label="Generation level">
-          {qualityOptions.map((quality) => {
-            const active = quality === selectedQuality;
-            return (
-              <button
-                className={active ? "active" : ""}
-                type="button"
-                role="option"
-                aria-selected={active}
-                key={quality}
-                onClick={() => {
-                  onSelect(quality);
-                  onOpenChange(false);
-                }}
-              >
-                <span>{quality}</span>
-                {active ? <Check size={14} /> : null}
-              </button>
-            );
-          })}
-        </div>
-      ) : null}
-    </div>
-  );
-}
-
-function VerificationBadge({ verification }: { verification: VerificationState }) {
-  if (verification.status === "verifying") {
-    return (
-      <span className="verification-status verifying" aria-label="Verifying OpenRouter key" title="Verifying OpenRouter key">
-        <Loader2 className="spin" size={14} />
-      </span>
-    );
-  }
-
-  if (verification.status === "valid") {
-    return (
-      <span className="verification-status valid" aria-label={verification.message || "OpenRouter key verified"} title={verification.message || "OpenRouter key verified"}>
-        <Check size={14} />
-      </span>
-    );
-  }
-
-  if (verification.status === "invalid") {
-    return (
-      <span className="verification-status invalid" aria-label={verification.message || "Invalid OpenRouter key"} title={verification.message || "Invalid OpenRouter key"}>
-        <AlertCircle size={14} />
-      </span>
-    );
-  }
-
-  return null;
-}
-
-function getFocusableElements(container: HTMLElement | null) {
-  if (!container) {
-    return [];
-  }
-
-  return Array.from(container.querySelectorAll<HTMLElement>(modalFocusableSelector)).filter((element) => {
-    const ariaHidden = element.getAttribute("aria-hidden") === "true";
-    return !ariaHidden && (element.offsetWidth > 0 || element.offsetHeight > 0 || element.getClientRects().length > 0);
-  });
-}
-
-function firstFocusableElement(container: HTMLElement | null) {
-  return getFocusableElements(container)[0] || null;
 }
 
 function newSession(): ChatSession {
   const now = new Date().toISOString();
   return {
     id: crypto.randomUUID(),
-    title: "New chat",
+    title: "New Session",
     createdAt: now,
     updatedAt: now,
     messages: []
   };
 }
 
-function titleFromPrompt(prompt: string) {
-  return prompt.length > 42 ? `${prompt.slice(0, 42)}...` : prompt;
-}
-
-function labelForModel(model: string, models: OpenRouterModelOption[]) {
-  const knownModel = models.find((option) => option.id === model);
-  if (knownModel) {
-    return knownModel.name.replace("Google ", "");
-  }
-  return model.length > 30 ? `${model.slice(0, 30)}...` : model;
-}
-
-function fixedModelOptions(models?: OpenRouterModelOption[]) {
-  const discovered = models?.find((option) => option.id === IMAGENT_GENERATION_MODEL_ID);
-  return [
-    {
-      ...fallbackModelOptions[0],
-      ...(discovered || {}),
-      id: IMAGENT_GENERATION_MODEL_ID
-    }
-  ];
-}
-
-function isUsableVerificationCache(cache: VerificationCache | null, cacheKey: string): cache is VerificationCache {
-  return Boolean(cache && cache.cacheKey === cacheKey && Array.isArray(cache.models) && cache.models.length > 0);
-}
-
-function sanitizeSessions(sessions: ChatSession[]) {
-  return sessions.map((session) => ({
-    ...session,
-    messages: session.messages.map((message) => {
-      if (!message.imageUrl?.startsWith("data:")) {
-        return message;
-      }
-      return {
-        ...message,
-        imageUrl: undefined,
-        imageFileName: undefined
-      };
-    })
-  }));
-}
-
-function isQualityOption(value: unknown): value is string {
-  return typeof value === "string" && qualityOptions.includes(value);
+function sanitizeSessions(value: ChatSession[]): ChatSession[] {
+  return value
+    .filter((session) => session && typeof session.id === "string")
+    .map((session) => ({
+      id: session.id,
+      title: session.title || "New Session",
+      createdAt: session.createdAt || new Date().toISOString(),
+      updatedAt: session.updatedAt || session.createdAt || new Date().toISOString(),
+      messages: Array.isArray(session.messages)
+        ? session.messages
+            .filter((message) => message && typeof message.content === "string")
+            .map((message) => {
+              const role: ChatMessage["role"] = message.role === "user" ? "user" : "assistant";
+              return {
+                id: message.id || crypto.randomUUID(),
+                role,
+                content: message.content,
+                createdAt: message.createdAt || session.updatedAt || new Date().toISOString()
+              };
+            })
+        : []
+    }));
 }
 
 function readJson<T>(key: string, fallback: T): T {
@@ -1164,4 +727,13 @@ function readJson<T>(key: string, fallback: T): T {
   } catch {
     return fallback;
   }
+}
+
+function titleFromPrompt(value: string) {
+  const title = value.replace(/\s+/g, " ").trim();
+  return title.length > 44 ? `${title.slice(0, 41)}...` : title || "New Session";
+}
+
+function isLevelOption(value: unknown): value is string {
+  return typeof value === "string" && levelOptions.includes(value);
 }
