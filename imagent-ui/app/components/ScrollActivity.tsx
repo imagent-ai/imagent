@@ -150,12 +150,31 @@ export function ScrollActivity() {
       if (!scrollKeys.includes(event.code) && !scrollKeys.includes(event.key)) {
         return;
       }
-      const focused = document.activeElement?.closest<HTMLElement>(TARGET_SELECTOR);
+      const activeElement = document.activeElement;
+      const focused = activeElement?.closest<HTMLElement>(TARGET_SELECTOR);
       if (focused && isScrollable(focused)) {
         show(recordFor(focused));
         return;
       }
+      if (isTextEditingElement(activeElement)) {
+        return;
+      }
       show(recordFor(null));
+    }
+
+    function onInput(event: Event) {
+      const target = event.target;
+      if (!(target instanceof HTMLElement)) {
+        return;
+      }
+
+      const scroller = target.matches(TARGET_SELECTOR) ? target : target.closest<HTMLElement>(TARGET_SELECTOR);
+      if (scroller && isScrollable(scroller)) {
+        show(recordFor(scroller));
+        return;
+      }
+
+      scheduleUpdate();
     }
 
     function scrollTargetFromPoint(x: number, y: number) {
@@ -310,6 +329,7 @@ export function ScrollActivity() {
     window.addEventListener("pointermove", onPointerMove, { passive: true });
     window.addEventListener("touchmove", onTouchMove, { passive: true });
     window.addEventListener("keydown", onKeyDown);
+    window.addEventListener("input", onInput, true);
     window.addEventListener("resize", onResize);
 
     return () => {
@@ -319,6 +339,7 @@ export function ScrollActivity() {
       window.removeEventListener("pointermove", onPointerMove);
       window.removeEventListener("touchmove", onTouchMove);
       window.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("input", onInput, true);
       window.removeEventListener("resize", onResize);
       if (frame) {
         window.cancelAnimationFrame(frame);
@@ -338,6 +359,15 @@ export function ScrollActivity() {
 
 function isScrollable(element: HTMLElement) {
   return element.scrollHeight > element.clientHeight || element.scrollWidth > element.clientWidth;
+}
+
+function isTextEditingElement(element: Element | null) {
+  return (
+    element instanceof HTMLInputElement ||
+    element instanceof HTMLTextAreaElement ||
+    element instanceof HTMLSelectElement ||
+    (element instanceof HTMLElement && element.isContentEditable)
+  );
 }
 
 function clamp(value: number, min: number, max: number) {
