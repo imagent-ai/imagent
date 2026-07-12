@@ -1,6 +1,16 @@
 "use client";
 
-import { FormEvent, MouseEvent, useEffect, useMemo, useRef, useState } from "react";
+import {
+  type ChangeEvent,
+  type FormEvent,
+  type KeyboardEvent as ReactKeyboardEvent,
+  type MouseEvent,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState
+} from "react";
 import { createPortal } from "react-dom";
 import {
   AlertTriangle,
@@ -8,6 +18,7 @@ import {
   ChevronDown,
   Download,
   FileJson,
+  ImagePlus,
   KeyRound,
   Loader2,
   MessageCirclePlus,
@@ -52,6 +63,11 @@ type ChatSession = {
   createdAt: string;
   updatedAt: string;
   messages: ChatMessage[];
+};
+
+type SelectedInputImage = {
+  name: string;
+  previewUrl: string;
 };
 
 type ModalState =
@@ -108,10 +124,10 @@ const SETTINGS_KEY = "imagent.generationSettings";
 const levelOptions = ["auto", "low", "medium", "high"];
 
 const templatePrompts = [
-  "Plan a cinematic product launch visual for an AI image agent.",
-  "Create a benchmark report graphic with a strong winner signal.",
-  "Draft a visual direction for a Gittensor miner dashboard.",
-  "Design an image prompt for explaining automated PR evaluation."
+  "Cinematic AI image-agent command room with glowing canvases, cyan glass panels, premium launch poster.",
+  "Golden benchmark winner poster with crown signal, agent leaderboard energy, dramatic studio lighting.",
+  "Futuristic Gittensor creator network with luminous miner nodes, flowing image thumbnails, deep teal atmosphere.",
+  "Elegant Imagent whitepaper cover showing plan, generate, critique, iterate as connected visual stages."
 ];
 
 const modalFocusableSelector = [
@@ -135,6 +151,7 @@ export function GenerationChat() {
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [activeSessionId, setActiveSessionId] = useState("");
   const [prompt, setPrompt] = useState("");
+  const [selectedInputImage, setSelectedInputImage] = useState<SelectedInputImage | null>(null);
   const [level, setLevel] = useState("auto");
   const [apiKey, setApiKey] = useState("");
   const [draftApiKey, setDraftApiKey] = useState("");
@@ -155,6 +172,8 @@ export function GenerationChat() {
   const modalTriggerRef = useRef<HTMLElement | null>(null);
   const closeModalRef = useRef<() => void>(() => {});
   const preserveModalTriggerRef = useRef(false);
+  const promptTextareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const imageInputRef = useRef<HTMLInputElement | null>(null);
 
   async function loadRuntimeStatus() {
     try {
@@ -204,6 +223,26 @@ export function GenerationChat() {
   useEffect(() => {
     closeModalRef.current = closeModal;
   });
+
+  useLayoutEffect(() => {
+    const textarea = promptTextareaRef.current;
+    if (!textarea) {
+      return;
+    }
+
+    textarea.style.height = "auto";
+    const maxHeight = 144;
+    textarea.style.height = `${Math.min(textarea.scrollHeight, maxHeight)}px`;
+    textarea.style.overflowY = textarea.scrollHeight > maxHeight ? "auto" : "hidden";
+  }, [prompt]);
+
+  useEffect(() => {
+    return () => {
+      if (selectedInputImage?.previewUrl) {
+        URL.revokeObjectURL(selectedInputImage.previewUrl);
+      }
+    };
+  }, [selectedInputImage?.previewUrl]);
 
   useEffect(() => {
     if (!modal) {
@@ -352,6 +391,7 @@ export function GenerationChat() {
     if (reusableSession) {
       setActiveSessionId(reusableSession.id);
       setPrompt("");
+      clearInputImage();
       setSidebarCollapsed(false);
       return;
     }
@@ -360,12 +400,49 @@ export function GenerationChat() {
     setSessions((current) => [session, ...current]);
     setActiveSessionId(session.id);
     setPrompt("");
+    clearInputImage();
     setSidebarCollapsed(false);
   }
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     void sendPrompt(prompt);
+  }
+
+  function handlePromptKeyDown(event: ReactKeyboardEvent<HTMLTextAreaElement>) {
+    if (event.key !== "Enter" || event.shiftKey || event.nativeEvent.isComposing) {
+      return;
+    }
+
+    event.preventDefault();
+    if (canSend) {
+      void sendPrompt(prompt);
+    }
+  }
+
+  function openImagePicker() {
+    imageInputRef.current?.click();
+  }
+
+  function selectInputImage(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+
+    if (!file || !file.type.startsWith("image/")) {
+      return;
+    }
+
+    setSelectedInputImage({
+      name: file.name,
+      previewUrl: URL.createObjectURL(file)
+    });
+  }
+
+  function clearInputImage() {
+    setSelectedInputImage(null);
+    if (imageInputRef.current) {
+      imageInputRef.current.value = "";
+    }
   }
 
   function selectTemplate(template: string) {
@@ -394,6 +471,7 @@ export function GenerationChat() {
 
     appendSessionMessages(sessionId, [userMessage], titleFromPrompt(content), now);
     setPrompt("");
+    clearInputImage();
 
     if (runtimeStatus && !runtimeStatus.ready) {
       appendSessionMessages(sessionId, [
@@ -829,7 +907,7 @@ export function GenerationChat() {
                 </>
               ) : (
                 <div className="generation-empty-state">
-                  <h1>What&apos;s your agent today?</h1>
+                  <h1>What&apos;s your agenda today?</h1>
                   <div className="generation-template-grid">
                     {templatePrompts.map((template) => (
                       <button type="button" key={template} onClick={() => selectTemplate(template)}>
@@ -843,15 +921,52 @@ export function GenerationChat() {
 
             <form className="generation-chat-input" onSubmit={submit}>
               <div className="generation-input-control">
-                <input
-                  value={prompt}
-                  onChange={(event) => setPrompt(event.target.value)}
-                  placeholder="Type your agenda..."
-                  type="text"
-                />
-                <button type="submit" disabled={!canSend} aria-label="Send agenda">
-                  {isGenerating ? <Loader2 className="spin" size={17} /> : <Send size={17} />}
-                </button>
+                {selectedInputImage ? (
+                  <div className="generation-input-attachment">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={selectedInputImage.previewUrl} alt="" />
+                    <button type="button" aria-label={`Remove ${selectedInputImage.name}`} onClick={clearInputImage}>
+                      <X size={13} />
+                    </button>
+                  </div>
+                ) : null}
+                <div className="generation-input-row">
+                  <input
+                    ref={imageInputRef}
+                    className="generation-image-input"
+                    type="file"
+                    accept="image/*"
+                    onChange={selectInputImage}
+                    tabIndex={-1}
+                  />
+                  <button
+                    className="generation-input-icon-button generation-attach-button"
+                    type="button"
+                    aria-label="Attach image"
+                    title="Attach image"
+                    onClick={openImagePicker}
+                  >
+                    <ImagePlus size={22} strokeWidth={2.15} />
+                  </button>
+                  <textarea
+                    className="custom-scrollbar"
+                    ref={promptTextareaRef}
+                    value={prompt}
+                    onChange={(event) => setPrompt(event.target.value)}
+                    onKeyDown={handlePromptKeyDown}
+                    placeholder="Type your agenda..."
+                    rows={1}
+                    aria-label="Generation prompt"
+                  />
+                  <button
+                    className="generation-input-icon-button generation-send-button"
+                    type="submit"
+                    disabled={!canSend}
+                    aria-label="Send agenda"
+                  >
+                    {isGenerating ? <Loader2 className="spin" size={17} /> : <Send size={17} />}
+                  </button>
+                </div>
               </div>
             </form>
           </section>
