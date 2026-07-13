@@ -445,6 +445,13 @@ export function GenerationChat() {
     }
   }
 
+  function restoreComposerForRetry(content: string) {
+    // A failed generation should not throw away what the user typed. Restore the
+    // prompt so a retry is one keystroke away, but never clobber a new prompt the
+    // user may have started typing while the request was in flight.
+    setPrompt((current) => (current.trim() ? current : content));
+  }
+
   function selectTemplate(template: string) {
     void sendPrompt(template);
   }
@@ -485,6 +492,7 @@ export function GenerationChat() {
           quality: level
         }
       ]);
+      restoreComposerForRetry(content);
       void loadRuntimeStatus();
       return;
     }
@@ -540,6 +548,7 @@ export function GenerationChat() {
           quality: level
         }
       ]);
+      restoreComposerForRetry(content);
       void loadRuntimeStatus();
     } finally {
       setIsGenerating(false);
