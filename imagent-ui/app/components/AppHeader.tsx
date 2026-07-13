@@ -1,7 +1,8 @@
 "use client";
 
+import { useEffect } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { BarChart3, BookOpenText, Home, ImageIcon, RadioTower } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { Route } from "next";
@@ -15,6 +16,20 @@ const navItems: Array<{ href: Route; label: string; icon: LucideIcon }> = [
 
 export function AppHeader() {
   const pathname = usePathname();
+  const router = useRouter();
+
+  useEffect(() => {
+    // Warm one likely next route instead of competing requests for every nav
+    // item. Generation is the main entry point, so Home gets priority there.
+    const nextRoute = pathname === "/" ? "/generation" : "/";
+    const timer = window.setTimeout(() => {
+      router.prefetch(nextRoute);
+    }, 400);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [pathname, router]);
 
   return (
     <header className="app-header">
@@ -28,7 +43,13 @@ export function AppHeader() {
           const Icon = item.icon;
           const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
           return (
-            <Link className={active ? "active" : ""} href={item.href} key={item.href}>
+            <Link
+              aria-current={active ? "page" : undefined}
+              className={active ? "active" : ""}
+              href={item.href}
+              key={item.href}
+              prefetch={false}
+            >
               <Icon size={16} />
               {item.label}
             </Link>

@@ -10,7 +10,7 @@ import {
   WandSparkles
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { EffectCard } from "@/app/components/EffectCard";
+import { StaticEffectCard } from "@/app/components/StaticEffectCard";
 
 type StepStatus = "active" | "complete" | "queued";
 
@@ -64,8 +64,8 @@ export function AgentStepper() {
   }
 
   return (
-    <div className="imagent-landing__stepper" aria-label="Agent trajectory steps" role="group">
-      <div className="imagent-landing__stepper-track" aria-label="Select agent trajectory step" data-reveal="fade-up" role="group">
+    <div className="imagent-landing__stepper" aria-label="Agent trajectory steps" data-reveal="fade-up" role="group">
+      <div className="imagent-landing__stepper-track" aria-label="Select agent trajectory step" role="group">
         {agentSteps.map((step, index) => {
           const status = getStepStatus(index, activeIndex);
 
@@ -97,11 +97,9 @@ export function AgentStepper() {
           const status = getStepStatus(index, activeIndex);
 
           return (
-            <li className="imagent-landing__step-card-item" data-reveal="fade-up" data-reveal-delay={index + 1} key={step.title}>
-              <EffectCard
-                animated={status === "active"}
+            <li className="imagent-landing__step-card-item" key={step.title}>
+              <StaticEffectCard
                 className={`imagent-landing__step-card imagent-landing__step-card--${status}`}
-                glareOpacity={status === "active" ? 0.16 : 0.1}
                 radius={20}
               >
                 <button
@@ -123,7 +121,7 @@ export function AgentStepper() {
                   <p>{step.copy}</p>
                   <small>{step.detail}</small>
                 </button>
-              </EffectCard>
+              </StaticEffectCard>
             </li>
           );
         })}

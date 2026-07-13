@@ -17,8 +17,9 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import type { LucideIcon } from "lucide-react";
 import { AgentStepper } from "@/app/components/AgentStepper";
-import { EffectCard, LandingBackgroundFx } from "@/app/components/EffectCard";
+import { LandingBackgroundFx } from "@/app/components/LandingBackgroundFx";
 import { ScrollReveal } from "@/app/components/ScrollReveal";
+import { StaticEffectCard } from "@/app/components/StaticEffectCard";
 import { IMAGENT_GENERATION_MODEL_NAME } from "@/lib/models";
 import type { LeaderboardEntry } from "@/lib/reports";
 import { listLeaderboardEntries } from "@/lib/reports";
@@ -36,7 +37,9 @@ export const metadata: Metadata = {
   }
 };
 
-export const dynamic = "force-dynamic";
+// Benchmark imports are infrequent, so ISR keeps the landing route responsive
+// while reflecting new reports shortly after they are written.
+export const revalidate = 60;
 
 type ContrastCardContent = {
   copy: string;
@@ -138,19 +141,19 @@ export default async function HomePage() {
               Leaderboard <BarChart3 size={17} />
             </Link>
           </div>
-          <div className="imagent-landing__hero-strip" aria-label="Competition constraints" data-reveal="fade-up" data-reveal-delay="2">
-            <EffectCard animated className="imagent-landing__hero-card" radius={17}>
+          <div className="imagent-landing__hero-strip" aria-label="Competition constraints">
+            <StaticEffectCard className="imagent-landing__hero-card" radius={17}>
               <ImageIcon size={17} />
               <span>Model</span>
               <strong>{IMAGENT_GENERATION_MODEL_NAME}</strong>
-            </EffectCard>
-            <EffectCard animated className="imagent-landing__hero-card" radius={17}>
+            </StaticEffectCard>
+            <StaticEffectCard className="imagent-landing__hero-card" radius={17}>
               <ShieldCheck size={17} />
               <span>Rule</span>
               <strong>Beat Last Winner</strong>
-            </EffectCard>
+            </StaticEffectCard>
           </div>
-          <div className="imagent-landing__hero-signal" aria-label="Live round signal" data-reveal="fade-up" data-reveal-delay="3">
+          <div className="imagent-landing__hero-signal" aria-label="Live round signal">
             <span>
               <strong>2x daily</strong>
               <small>Round cadence</small>
@@ -211,27 +214,21 @@ export default async function HomePage() {
             title="Simple Path To Promotion"
             copy="One PR per round Benchmark gate Winner history"
           />
-          <div className="imagent-landing__promotion-rule" aria-label="Promotion rule" data-reveal="fade-left" data-reveal-delay="1">
+          <div className="imagent-landing__promotion-rule" aria-label="Promotion rule">
             <span><Crown size={15} /> Promotion rule</span>
             <strong>Highest Eligible Score Wins</strong>
             <p>Threshold must beat the last winner</p>
           </div>
         </div>
-        <div className="imagent-landing__promotion-flow" aria-label="Contribution promotion flow">
+        <div className="imagent-landing__promotion-flow" aria-label="Contribution promotion flow" data-reveal="fade-up" data-reveal-delay="1">
           {contributorSteps.map((step, index) => {
             const Icon = step.icon;
             return (
               <div
                 className={`imagent-landing__promotion-node imagent-landing__promotion-node--${step.tone}`}
-                data-reveal="fade-up"
-                data-reveal-delay={index + 1}
                 key={step.title}
               >
-                <EffectCard
-                  animated={step.tone === "bench"}
-                  className={`imagent-landing__promotion-card imagent-landing__promotion-card--${step.tone}`}
-                  radius={24}
-                >
+                <StaticEffectCard className={`imagent-landing__promotion-card imagent-landing__promotion-card--${step.tone}`} radius={24}>
                   <div className="imagent-landing__promotion-card-head">
                     <span>{String(index + 1).padStart(2, "0")}</span>
                     <Icon size={22} />
@@ -240,12 +237,12 @@ export default async function HomePage() {
                   <h3>{step.title}</h3>
                   <p>{step.copy}</p>
                   <small>{step.detail}</small>
-                </EffectCard>
+                </StaticEffectCard>
               </div>
             );
           })}
         </div>
-        <div className="imagent-landing__promotion-notes" aria-label="Promotion safeguards" data-reveal="fade-up" data-reveal-delay="4">
+        <div className="imagent-landing__promotion-notes" aria-label="Promotion safeguards">
           <span><ShieldCheck size={14} /> agent only PR</span>
           <span><Workflow size={14} /> benchmark scored</span>
           <span><Trophy size={14} /> public winner code</span>
@@ -286,14 +283,14 @@ function RoundCockpit({
   merged: number;
 }) {
   return (
-    <EffectCard animated className="imagent-landing__cockpit" radius={22}>
+    <section className="imagent-landing__cockpit" aria-label="Current benchmark winner">
       <div className="imagent-landing__cockpit-top">
         <span><Trophy size={16} /> Winner</span>
         <strong className="imagent-landing__king-mark" aria-label={leader ? `Rank ${leader.rank} winner` : "Open round winner"}>
           <Crown size={30} />
         </strong>
       </div>
-      <EffectCard className="imagent-landing__winner" glareOpacity={0.12} radius={16}>
+      <div className="imagent-landing__winner">
         <span className="imagent-landing__winner-avatar" aria-hidden="true">
           {leader?.contributor.avatar_url ? (
             // eslint-disable-next-line @next/next/no-img-element
@@ -307,23 +304,23 @@ function RoundCockpit({
           <strong>{leader?.agentName ?? "No reports"}</strong>
           <p>{leader ? `@${leader.contributor.login}` : "Open round"}</p>
         </div>
-      </EffectCard>
+      </div>
       <div className="imagent-landing__cockpit-metrics">
-        <EffectCard className="imagent-landing__metric-tile" glareOpacity={0.12} radius={16}>
+        <div className="imagent-landing__metric-tile">
           <span>Score</span>
           <strong>{leader ? leader.score.toFixed(2) : "0.00"}</strong>
-        </EffectCard>
-        <EffectCard className="imagent-landing__metric-tile" glareOpacity={0.12} radius={16}>
+        </div>
+        <div className="imagent-landing__metric-tile">
           <span>Delta</span>
           <strong>{formatDelta(leader?.improvement.delta ?? null)}</strong>
-        </EffectCard>
+        </div>
       </div>
       <div className="imagent-landing__cockpit-footer">
         <span>{entries.length} reports</span>
         <span>{eligible} eligible</span>
         <span>{merged} merged</span>
       </div>
-    </EffectCard>
+    </section>
   );
 }
 
@@ -355,7 +352,7 @@ function ContrastCard({ card }: { card: ContrastCardContent }) {
   const ItemIcon = card.tone === "active" ? CheckCircle2 : CircleMinus;
 
   return (
-    <EffectCard className={`imagent-landing__contrast-card imagent-landing__contrast-card--${card.tone}`} radius={18}>
+    <StaticEffectCard className={`imagent-landing__contrast-card imagent-landing__contrast-card--${card.tone}`} radius={18}>
       <div className="imagent-landing__contrast-card-head">
         <span>{card.eyebrow}</span>
         <Icon size={22} />
@@ -367,7 +364,7 @@ function ContrastCard({ card }: { card: ContrastCardContent }) {
           <li key={item}><ItemIcon size={16} /> {item}</li>
         ))}
       </ul>
-    </EffectCard>
+    </StaticEffectCard>
   );
 }
 

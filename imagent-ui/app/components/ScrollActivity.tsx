@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { usePathname } from "next/navigation";
 
 type Axis = "vertical" | "horizontal";
 
@@ -26,7 +27,14 @@ const TRACK_INSET = 4;
 const TARGET_SELECTOR = ".custom-scrollbar, .leaderboard-table-wrap";
 
 export function ScrollActivity() {
+  const pathname = usePathname();
+
   useEffect(() => {
+    const tracksCustomScrollers = pathname === "/generation" || pathname.startsWith("/generation/") || pathname === "/leaderboard";
+    if (!tracksCustomScrollers) {
+      return;
+    }
+
     const records = new Map<HTMLElement | null, ScrollbarRecord>();
     let frame = 0;
 
@@ -320,8 +328,6 @@ export function ScrollActivity() {
       refreshTargets();
     }
 
-    const observer = new MutationObserver(refreshTargets);
-    observer.observe(document.body, { childList: true, subtree: true });
     refreshTargets();
 
     window.addEventListener("scroll", onScroll, true);
@@ -333,7 +339,6 @@ export function ScrollActivity() {
     window.addEventListener("resize", onResize);
 
     return () => {
-      observer.disconnect();
       window.removeEventListener("scroll", onScroll, true);
       window.removeEventListener("wheel", onWheel);
       window.removeEventListener("pointermove", onPointerMove);
@@ -352,7 +357,7 @@ export function ScrollActivity() {
         record.horizontal.remove();
       });
     };
-  }, []);
+  }, [pathname]);
 
   return null;
 }

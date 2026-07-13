@@ -2545,13 +2545,15 @@ textarea:focus-visible {
   z-index: 1;
 }
 
-.app-header,
 .app-footer {
   position: relative;
   z-index: 10;
 }
 
 .app-header {
+  position: sticky;
+  top: 0;
+  z-index: 1000;
   background:
     linear-gradient(115deg, rgba(225, 236, 249, 0.86), rgba(231, 240, 250, 0.72) 56%, rgba(1, 113, 249, 0.12));
   border-bottom-color: rgba(1, 113, 249, 0.2);
@@ -3742,10 +3744,12 @@ body :is(.whitepaper-hero, .home-hero, .leaderboard-hero, .report-hero)
 @keyframes landing-pulse {
   0%,
   100% {
-    box-shadow: 0 0 0 0 rgba(0, 226, 251, 0.3);
+    opacity: 0.7;
+    transform: scale(0.86);
   }
   50% {
-    box-shadow: 0 0 0 10px rgba(0, 226, 251, 0);
+    opacity: 0;
+    transform: scale(1.35);
   }
 }
 
@@ -3759,7 +3763,7 @@ body :is(.whitepaper-hero, .home-hero, .leaderboard-hero, .report-hero)
   }
 }
 
-@keyframes landing-orbit {
+@keyframes imagent-page-orbit {
   from {
     transform: translate3d(-12%, -8%, 0) rotate(0deg) scale(1);
   }
@@ -3828,28 +3832,21 @@ body :is(.whitepaper-hero, .home-hero, .leaderboard-hero, .report-hero)
 @keyframes landing-vs-breathe {
   0%,
   100% {
-    box-shadow:
-      0 16px 42px rgba(0, 10, 24, 0.34),
-      0 0 28px rgba(0, 226, 251, 0.26),
-      0 0 0 5px rgba(0, 226, 251, 0.04),
-      inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    transform: scale(1);
   }
   50% {
-    box-shadow:
-      0 18px 48px rgba(0, 10, 24, 0.38),
-      0 0 44px rgba(0, 226, 251, 0.42),
-      0 0 0 8px rgba(133, 245, 173, 0.055),
-      inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    transform: scale(1.035);
   }
 }
 
 :root {
-  --landing-pointer-x: 70vw;
-  --landing-pointer-y: 22vh;
+  --imagent-page-base: #07182e;
+  --imagent-page-pointer-x: 70vw;
+  --imagent-page-pointer-y: 22vh;
 }
 
 body:has(.imagent-landing) {
-  --landing-bg: #07182e;
+  --landing-bg: var(--imagent-page-base);
   --landing-card: rgba(13, 48, 86, 0.82);
   --landing-card-soft: rgba(12, 43, 78, 0.66);
   --landing-line: rgba(86, 221, 255, 0.24);
@@ -3863,22 +3860,27 @@ body:has(.imagent-landing) {
 }
 
 body:has(.imagent-landing) main {
-  background:
-    radial-gradient(circle at 78% 0%, rgba(0, 226, 251, 0.16), transparent 32%),
-    radial-gradient(circle at 8% 34%, rgba(1, 113, 249, 0.14), transparent 28%),
-    linear-gradient(180deg, #07182e 0%, #0b2442 48%, #07182e 100%);
+  background: transparent;
   padding-bottom: 0;
 }
 
 body:has(.imagent-landing) .site-background,
-body:has(.imagent-landing) .site-background__base {
-  background: #07182e;
+body:has(.imagent-whitepaper) .site-background {
+  background: var(--imagent-page-base);
+}
+
+body:has(.imagent-landing) .site-background__base,
+body:has(.imagent-whitepaper) .site-background__base {
+  animation: none;
+  background: var(--imagent-page-base);
+  background-size: auto;
+  opacity: 1;
 }
 
 body:has(.imagent-landing) .app-header {
   background: rgba(7, 24, 46, 0.88);
   border-bottom-color: rgba(86, 221, 255, 0.22);
-  backdrop-filter: saturate(180%) blur(18px);
+  backdrop-filter: none;
   box-shadow: 0 18px 48px rgba(0, 10, 24, 0.28);
   color: var(--landing-text);
   position: sticky;
@@ -3930,9 +3932,10 @@ body .imagent-landing {
   z-index: 1;
 }
 
-body .imagent-landing__background-fx {
+/* Shared visual field for Home, Generation, and Whitepaper. */
+body .imagent-page-background-fx {
   background:
-    radial-gradient(620px circle at var(--landing-pointer-x) var(--landing-pointer-y), rgba(0, 226, 251, 0.34), transparent 60%),
+    radial-gradient(620px circle at var(--imagent-page-pointer-x) var(--imagent-page-pointer-y), rgba(0, 226, 251, 0.34), transparent 60%),
     linear-gradient(rgba(102, 227, 255, 0.105) 1px, transparent 1px),
     linear-gradient(90deg, rgba(102, 227, 255, 0.085) 1px, transparent 1px);
   background-size: auto, 82px 82px, 82px 82px;
@@ -3943,9 +3946,9 @@ body .imagent-landing__background-fx {
   z-index: 0;
 }
 
-body .imagent-landing__background-fx::before,
-body .imagent-landing__background-fx::after,
-body .imagent-landing__background-fx > span {
+body .imagent-page-background-fx::before,
+body .imagent-page-background-fx::after,
+body .imagent-page-background-fx > span {
   border-radius: 999px;
   content: "";
   filter: blur(44px);
@@ -3953,8 +3956,8 @@ body .imagent-landing__background-fx > span {
   position: absolute;
 }
 
-body .imagent-landing__background-fx::before {
-  animation: landing-orbit 14s ease-in-out infinite;
+body .imagent-page-background-fx::before {
+  animation: imagent-page-orbit 14s ease-in-out infinite;
   background: rgba(0, 226, 251, 0.34);
   height: 430px;
   left: 6%;
@@ -3962,8 +3965,8 @@ body .imagent-landing__background-fx::before {
   width: 430px;
 }
 
-body .imagent-landing__background-fx::after {
-  animation: landing-orbit 18s ease-in-out infinite reverse;
+body .imagent-page-background-fx::after {
+  animation: imagent-page-orbit 18s ease-in-out infinite reverse;
   background: rgba(1, 113, 249, 0.42);
   height: 520px;
   right: 8%;
@@ -3971,8 +3974,8 @@ body .imagent-landing__background-fx::after {
   width: 520px;
 }
 
-body .imagent-landing__background-fx > span:first-child {
-  animation: landing-orbit 16s ease-in-out infinite;
+body .imagent-page-background-fx > span:first-child {
+  animation: imagent-page-orbit 16s ease-in-out infinite;
   background: rgba(133, 245, 173, 0.18);
   bottom: 10%;
   height: 360px;
@@ -3980,8 +3983,8 @@ body .imagent-landing__background-fx > span:first-child {
   width: 360px;
 }
 
-body .imagent-landing__background-fx > span:nth-child(2) {
-  animation: landing-orbit 12s ease-in-out infinite reverse;
+body .imagent-page-background-fx > span:nth-child(2) {
+  animation: imagent-page-orbit 12s ease-in-out infinite reverse;
   background: rgba(0, 226, 251, 0.25);
   height: 300px;
   right: 22%;
@@ -3989,7 +3992,7 @@ body .imagent-landing__background-fx > span:nth-child(2) {
   width: 300px;
 }
 
-body .imagent-landing__background-fx > span:nth-child(3) {
+body .imagent-page-background-fx > span:nth-child(3) {
   animation: landing-grid-river 14s linear infinite;
   background:
     linear-gradient(rgba(0, 226, 251, 0.12) 1px, transparent 1px),
@@ -4001,7 +4004,7 @@ body .imagent-landing__background-fx > span:nth-child(3) {
   opacity: 0.52;
 }
 
-body .imagent-landing > :not(.imagent-landing__background-fx) {
+body .imagent-landing > :not(.imagent-page-background-fx) {
   position: relative;
   z-index: 1;
 }
@@ -4018,15 +4021,13 @@ body .imagent-landing__reveal-shell {
 }
 
 html.imagent-reveal-ready body .imagent-landing [data-reveal] {
-  filter: blur(12px);
   opacity: 0;
   transform: translate3d(0, 28px, 0) scale(0.985);
   transition:
     opacity 760ms cubic-bezier(0.22, 1, 0.36, 1),
-    transform 760ms cubic-bezier(0.22, 1, 0.36, 1),
-    filter 760ms cubic-bezier(0.22, 1, 0.36, 1);
+    transform 760ms cubic-bezier(0.22, 1, 0.36, 1);
   transition-delay: var(--reveal-delay, 0ms);
-  will-change: opacity, transform, filter;
+  will-change: opacity, transform;
 }
 
 html.imagent-reveal-ready body .imagent-landing [data-reveal="fade-right"] {
@@ -4042,7 +4043,6 @@ html.imagent-reveal-ready body .imagent-landing [data-reveal="scale"] {
 }
 
 html.imagent-reveal-ready body .imagent-landing [data-reveal][data-reveal-visible="true"] {
-  filter: blur(0);
   opacity: 1;
   transform: translate3d(0, 0, 0) scale(1);
 }
@@ -4059,9 +4059,9 @@ body .imagent-landing :is(
   .imagent-landing__section-kicker,
   .imagent-landing__button,
   .imagent-landing__cockpit-top > span,
-  .imagent-landing__winner .imagent-effect-card__content > div > span,
+  .imagent-landing__winner > div > span,
   .imagent-landing__winner p,
-  .imagent-landing__metric-tile .imagent-effect-card__content > span,
+  .imagent-landing__metric-tile > span,
   .imagent-landing__cockpit-footer > span,
   .imagent-landing__hero-card .imagent-effect-card__content > span,
   .imagent-landing__hero-signal,
@@ -4299,6 +4299,40 @@ body .imagent-effect-card__content {
   z-index: 3;
 }
 
+/* Home cards keep the same layout and hover glint without hydrating BorderGlow. */
+.imagent-effect-card--static {
+  background: var(--card-bg, #120f17);
+  border: 1px solid rgb(255 255 255 / 15%);
+  border-radius: var(--border-radius, 22px);
+  box-shadow: 0 14px 34px rgba(0, 10, 24, 0.2);
+  display: grid;
+  isolation: isolate;
+  position: relative;
+  transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+}
+
+body .imagent-effect-card--static > .border-glow-inner > .imagent-effect-card__glare {
+  overflow: hidden;
+  position: relative;
+}
+
+body .imagent-effect-card--static > .border-glow-inner > .imagent-effect-card__glare::after {
+  background: linear-gradient(118deg, transparent 42%, rgba(188, 246, 255, 0.2) 50%, transparent 59%);
+  content: "";
+  inset: 0;
+  opacity: 0;
+  pointer-events: none;
+  position: absolute;
+  transform: translateX(-72%);
+  transition: opacity 220ms ease, transform 560ms cubic-bezier(0.22, 1, 0.36, 1);
+  z-index: 2;
+}
+
+body .imagent-effect-card--static:hover > .border-glow-inner > .imagent-effect-card__glare::after {
+  opacity: 1;
+  transform: translateX(72%);
+}
+
 body .imagent-landing__hero-card,
 body .imagent-landing__metric-tile {
   --card-bg: rgba(4, 42, 82, 0.78);
@@ -4323,8 +4357,7 @@ body .imagent-landing__contrast-card svg {
   color: var(--landing-cyan);
 }
 
-body .imagent-landing__cockpit-top > span svg,
-body .imagent-landing__winner .imagent-effect-card__content > svg {
+body .imagent-landing__cockpit-top > span svg {
   color: #f6c453;
   filter: drop-shadow(0 0 14px rgba(246, 196, 83, 0.44));
 }
@@ -4350,17 +4383,42 @@ body .imagent-landing__hero-card .imagent-effect-card__content > strong {
 body .imagent-landing__cockpit {
   align-self: center;
   animation: landing-float 7s ease-in-out infinite;
+  background: rgba(13, 48, 86, 0.82);
+  border: 1px solid rgba(86, 221, 255, 0.24);
   border-radius: 22px;
+  box-shadow: 0 14px 34px rgba(0, 10, 24, 0.2);
+  display: grid;
+  gap: 18px;
+  isolation: isolate;
   justify-self: end;
   max-width: 392px;
   min-height: 432px;
+  overflow: hidden;
+  padding: 24px;
+  position: relative;
   width: 100%;
 }
 
-body .imagent-landing__cockpit > .border-glow-inner > .imagent-effect-card__glare > .imagent-effect-card__content {
-  display: grid;
-  gap: 18px;
-  padding: 24px;
+body .imagent-landing :is(.imagent-landing__cockpit, .imagent-landing__winner, .imagent-landing__metric-tile)::after {
+  background: linear-gradient(118deg, transparent 42%, rgba(188, 246, 255, 0.2) 50%, transparent 59%);
+  content: "";
+  inset: 0;
+  opacity: 0;
+  pointer-events: none;
+  position: absolute;
+  transform: translateX(-72%);
+  transition: opacity 220ms ease, transform 560ms cubic-bezier(0.22, 1, 0.36, 1);
+  z-index: 2;
+}
+
+body .imagent-landing :is(.imagent-landing__cockpit, .imagent-landing__winner, .imagent-landing__metric-tile):hover::after {
+  opacity: 1;
+  transform: translateX(72%);
+}
+
+body .imagent-landing :is(.imagent-landing__cockpit, .imagent-landing__winner, .imagent-landing__metric-tile) > * {
+  position: relative;
+  z-index: 1;
 }
 
 body .imagent-landing__cockpit-top,
@@ -4402,14 +4460,15 @@ body .imagent-landing__king-mark svg {
 
 body .imagent-landing__winner,
 body .imagent-landing__metric-tile {
+  background: rgba(4, 42, 82, 0.78);
+  border: 1px solid rgba(0, 226, 251, 0.18);
   border-radius: 16px;
+  box-shadow: 0 14px 34px rgba(0, 10, 24, 0.2);
+  overflow: hidden;
+  position: relative;
 }
 
 body .imagent-landing__winner {
-  min-height: 148px;
-}
-
-body .imagent-landing__winner .imagent-effect-card__content {
   align-items: center;
   display: grid;
   gap: 18px;
@@ -4444,8 +4503,8 @@ body .imagent-landing__winner-avatar svg {
   filter: drop-shadow(0 0 14px rgba(246, 196, 83, 0.44));
 }
 
-body .imagent-landing__winner .imagent-effect-card__content > div > span,
-body .imagent-landing__metric-tile .imagent-effect-card__content > span,
+body .imagent-landing__winner > div > span,
+body .imagent-landing__metric-tile > span,
 body .imagent-landing__cockpit-footer > span,
 body .imagent-landing__step-card-head > span {
   color: var(--landing-muted);
@@ -4456,7 +4515,7 @@ body .imagent-landing__step-card-head > span {
   text-transform: uppercase;
 }
 
-body .imagent-landing__winner .imagent-effect-card__content > div > strong {
+body .imagent-landing__winner > div > strong {
   color: var(--landing-text);
   display: block;
   font-size: 18px;
@@ -4476,12 +4535,11 @@ body .imagent-landing__cockpit-metrics {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
-body .imagent-landing__metric-tile .imagent-effect-card__content {
-  display: block;
+body .imagent-landing__metric-tile {
   padding: 18px;
 }
 
-body .imagent-landing__metric-tile .imagent-effect-card__content > strong {
+body .imagent-landing__metric-tile > strong {
   color: var(--landing-text);
   display: block;
   font-size: 32px;
@@ -5490,6 +5548,20 @@ body .imagent-landing__cta-copy .imagent-landing__actions {
   margin-top: clamp(24px, 4vw, 34px);
 }
 
+/* The landing route is intentionally long. Skip offscreen section layout and
+   paint during navigation, then render each section just before it enters view. */
+@supports (content-visibility: auto) {
+  body .imagent-landing__section,
+  body .imagent-landing__cta {
+    contain-intrinsic-size: auto 720px;
+    content-visibility: auto;
+  }
+
+  body .imagent-landing__cta {
+    contain-intrinsic-size: auto 440px;
+  }
+}
+
 @media (max-width: 1180px) {
   body .imagent-landing__hero,
   body .imagent-landing__section--contrast,
@@ -5529,7 +5601,7 @@ body .imagent-landing__cta-copy .imagent-landing__actions {
     width: 100%;
   }
 
-  body .imagent-landing__background-fx {
+  body .imagent-page-background-fx {
     top: 136px;
   }
 
@@ -5755,9 +5827,9 @@ body .imagent-landing__cta-copy .imagent-landing__actions {
   body .imagent-landing__hero,
   body .imagent-landing__pulse,
   body .imagent-landing__cockpit,
-  body .imagent-landing__background-fx::before,
-  body .imagent-landing__background-fx::after,
-  body .imagent-landing__background-fx > span,
+  body .imagent-page-background-fx::before,
+  body .imagent-page-background-fx::after,
+  body .imagent-page-background-fx > span,
   body .imagent-landing__versus-line span,
   body .imagent-landing__versus-line span::before,
   body .imagent-landing__versus-line strong,
@@ -5808,11 +5880,11 @@ body .generation-redesign * {
   box-sizing: border-box;
 }
 
-body .generation-redesign .imagent-landing__background-fx {
+body .generation-redesign .imagent-page-background-fx {
   z-index: 1;
 }
 
-body .generation-redesign > :not(.imagent-landing__background-fx) {
+body .generation-redesign > :not(.imagent-page-background-fx) {
   position: relative;
   z-index: 2;
 }
@@ -9480,5 +9552,261 @@ body .generation-input-control .generation-input-attachment button:hover:not(:di
     filter: none;
     opacity: 1;
     transform: none;
+  }
+}
+
+/* Shared sticky command bar. */
+body .app-header {
+  --header-active-end: #0079ff;
+  --header-active-start: #12d9f6;
+  --header-border: rgba(3, 88, 188, 0.2);
+  --header-ink: var(--ink);
+  --header-muted: var(--ink-2);
+  --header-rail: rgba(1, 113, 249, 0.075);
+  --header-rail-border: rgba(3, 88, 188, 0.14);
+  --header-signal: #00cdeb;
+  background:
+    radial-gradient(460px 88px at 11% -95%, rgba(18, 217, 246, 0.2), transparent 75%),
+    radial-gradient(380px 88px at 90% -110%, rgba(1, 113, 249, 0.16), transparent 72%),
+    rgba(246, 250, 255, 0.88);
+  border-bottom: 1px solid var(--header-border);
+  box-shadow: 0 18px 42px rgba(0, 19, 46, 0.18), inset 0 -1px 0 rgba(255, 255, 255, 0.56);
+  isolation: isolate;
+  overflow: visible;
+}
+
+body .app-header::before {
+  background:
+    linear-gradient(90deg, transparent 0 7%, rgba(255, 255, 255, 0.36) 28%, transparent 54%),
+    linear-gradient(90deg, rgba(1, 113, 249, 0.06) 1px, transparent 1px);
+  background-size: 100% 100%, 74px 100%;
+  content: "";
+  inset: 0;
+  opacity: 0.68;
+  pointer-events: none;
+  position: absolute;
+  z-index: 0;
+}
+
+body .app-header::after {
+  animation: imagent-header-signal 6.2s linear infinite;
+  background: linear-gradient(90deg, transparent, var(--header-signal), rgba(255, 255, 255, 0.95), var(--header-signal), transparent);
+  bottom: -1px;
+  content: "";
+  height: 2px;
+  left: 0;
+  opacity: 0.86;
+  pointer-events: none;
+  position: absolute;
+  transform: translateX(-105%);
+  width: min(410px, 34vw);
+  z-index: 2;
+}
+
+body .app-header > * {
+  position: relative;
+  z-index: 1;
+}
+
+body .app-brand {
+  color: var(--header-ink);
+  gap: 11px;
+  transition: color 180ms ease, transform 180ms ease;
+}
+
+body .app-brand::after {
+  background: var(--header-signal);
+  border-radius: 50%;
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--header-signal) 13%, transparent), 0 0 16px color-mix(in srgb, var(--header-signal) 56%, transparent);
+  content: "";
+  height: 5px;
+  opacity: 0.88;
+  width: 5px;
+}
+
+body .app-brand:hover {
+  transform: translateX(2px);
+}
+
+body .app-brand img {
+  border-color: color-mix(in srgb, var(--header-signal) 54%, transparent);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--header-signal) 8%, transparent), 0 12px 24px color-mix(in srgb, var(--header-signal) 22%, transparent);
+  transition: box-shadow 180ms ease, transform 240ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+body .app-brand:hover img {
+  box-shadow: 0 0 0 5px color-mix(in srgb, var(--header-signal) 12%, transparent), 0 14px 28px color-mix(in srgb, var(--header-signal) 34%, transparent);
+  transform: rotate(-5deg) scale(1.06);
+}
+
+body .app-nav {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  gap: 6px;
+  padding: 0;
+}
+
+body .app-nav a {
+  border: 1px solid transparent;
+  color: var(--header-muted);
+  height: 32px;
+  padding: 0 12px;
+  position: relative;
+  transition: background 180ms ease, border-color 180ms ease, box-shadow 180ms ease, color 180ms ease, transform 180ms ease;
+}
+
+body .app-nav a::after {
+  background: rgba(255, 255, 255, 0.88);
+  border-radius: 99px;
+  bottom: 5px;
+  content: "";
+  height: 2px;
+  left: 50%;
+  opacity: 0;
+  position: absolute;
+  transform: translateX(-50%) scaleX(0.35);
+  transition: opacity 180ms ease, transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
+  width: 14px;
+}
+
+body .app-nav a:hover {
+  background: color-mix(in srgb, var(--header-signal) 11%, transparent);
+  border-color: color-mix(in srgb, var(--header-signal) 24%, transparent);
+  color: var(--header-ink);
+  transform: translateY(-1px);
+}
+
+body .app-header .app-nav :is(a.active, a[aria-current="page"]) {
+  background: linear-gradient(135deg, var(--header-active-start), var(--header-active-end));
+  border-color: color-mix(in srgb, #ffffff 26%, transparent);
+  box-shadow: 0 9px 20px color-mix(in srgb, var(--header-active-end) 34%, transparent), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  color: #ffffff;
+}
+
+body .app-header .app-nav :is(a.active, a[aria-current="page"])::after {
+  opacity: 1;
+  transform: translateX(-50%) scaleX(1);
+}
+
+/* This must follow the active rule: active links need their own hover treatment. */
+body .app-header .app-nav :is(a.active, a[aria-current="page"]):hover {
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--header-active-start) 72%, #ffffff),
+    color-mix(in srgb, var(--header-active-end) 88%, #ffffff)
+  );
+  border-color: color-mix(in srgb, #ffffff 48%, transparent);
+  box-shadow: 0 13px 28px color-mix(in srgb, var(--header-active-end) 46%, transparent), inset 0 1px 0 rgba(255, 255, 255, 0.48);
+  color: #ffffff;
+  transform: translateY(-1px);
+}
+
+body .app-header .app-nav :is(a.active, a[aria-current="page"]):hover::after {
+  box-shadow: 0 0 9px rgba(255, 255, 255, 0.82);
+}
+
+body .header-subnet {
+  background: var(--header-rail);
+  border-color: var(--header-rail-border);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 8px 22px rgba(0, 21, 51, 0.08);
+  color: var(--header-ink);
+  font-family: var(--font-jetbrains), "JetBrains Mono", ui-monospace, monospace;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.11em;
+  padding: 0 12px;
+  text-transform: uppercase;
+}
+
+body .header-subnet::before {
+  animation: imagent-header-beacon 2.4s ease-in-out infinite;
+  background: var(--header-signal);
+  border-radius: 50%;
+  box-shadow: 0 0 0 0 color-mix(in srgb, var(--header-signal) 48%, transparent);
+  content: "";
+  height: 5px;
+  width: 5px;
+}
+
+body .header-subnet svg {
+  color: var(--header-signal);
+}
+
+body .header-subnet small {
+  background: color-mix(in srgb, var(--header-signal) 13%, transparent);
+  border-color: color-mix(in srgb, var(--header-signal) 28%, transparent);
+  color: var(--header-signal);
+}
+
+body:has(.imagent-landing) .app-header,
+body:has(.imagent-whitepaper) .app-header {
+  --header-active-end: #087eff;
+  --header-active-start: #00d7ee;
+  --header-border: rgba(86, 221, 255, 0.24);
+  --header-ink: #ecfbff;
+  --header-muted: rgba(202, 229, 242, 0.72);
+  --header-rail: rgba(0, 226, 251, 0.065);
+  --header-rail-border: rgba(86, 221, 255, 0.18);
+  --header-signal: #00e2fb;
+  background:
+    radial-gradient(430px 88px at 12% -90%, rgba(0, 226, 251, 0.17), transparent 72%),
+    radial-gradient(360px 88px at 89% -115%, rgba(1, 113, 249, 0.22), transparent 72%),
+    linear-gradient(102deg, rgba(3, 16, 35, 0.96), rgba(4, 25, 52, 0.88) 54%, rgba(2, 20, 44, 0.95));
+  border-bottom-color: var(--header-border);
+  box-shadow: 0 18px 46px rgba(0, 5, 18, 0.5), inset 0 -1px 0 rgba(86, 221, 255, 0.08);
+}
+
+body:has(.imagent-landing) .app-header::before,
+body:has(.imagent-whitepaper) .app-header::before {
+  background:
+    linear-gradient(90deg, transparent 0 8%, rgba(121, 239, 255, 0.15) 28%, transparent 55%),
+    linear-gradient(90deg, rgba(86, 221, 255, 0.07) 1px, transparent 1px);
+}
+
+@keyframes imagent-header-signal {
+  from { transform: translateX(-105%); }
+  to { transform: translateX(calc(100vw + 105%)); }
+}
+
+@keyframes imagent-header-beacon {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--header-signal) 40%, transparent);
+    opacity: 0.72;
+  }
+  50% {
+    box-shadow: 0 0 0 5px color-mix(in srgb, var(--header-signal) 0%, transparent);
+    opacity: 1;
+  }
+}
+
+@media (max-width: 720px) {
+  body .app-header {
+    overflow: hidden;
+  }
+
+  body .app-brand::after {
+    height: 4px;
+    width: 4px;
+  }
+
+  body .app-nav {
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    padding: 0;
+  }
+
+  body .app-nav a {
+    height: 34px;
+  }
+
+  body .header-subnet::before {
+    height: 4px;
+    width: 4px;
   }
 }
