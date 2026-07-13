@@ -437,10 +437,12 @@ def test_round_filters_maintainer_and_needs_rebase_prs() -> None:
         ]
     )
 
-    prs = round_manager.open_same_repo_prs(github, "imagent-ai/imagent")
+    prs = round_manager.open_same_repo_prs(github, "gittensor-agent-forge/gt-imagent")
 
     assert [item["number"] for item in prs] == [1]
-    assert round_manager.is_maintainer_pr(_pull(4, "dave", [], author_association="COLLABORATOR"), "imagent-ai/imagent")
+    assert round_manager.is_maintainer_pr(
+        _pull(4, "dave", [], author_association="COLLABORATOR"), "gittensor-agent-forge/gt-imagent"
+    )
 
 
 def _git(repo: Path, *args: str) -> None:
@@ -457,7 +459,7 @@ def _pull(number: int, author: str, labels: list[str], *, author_association: st
         "created_at": f"2026-07-06T00:00:{number:02d}Z",
         "draft": False,
         "author_association": author_association,
-        "head": {"repo": {"full_name": "imagent-ai/imagent"}},
+        "head": {"repo": {"full_name": "gittensor-agent-forge/gt-imagent"}},
         "user": {"login": author},
         "labels": [{"name": label} for label in labels],
     }
@@ -468,7 +470,7 @@ class _FakeGitHub:
         self.pulls = pulls
 
     def paginate(self, path: str) -> list[dict]:
-        if path.startswith("/repos/imagent-ai/imagent/pulls?"):
+        if path.startswith("/repos/gittensor-agent-forge/gt-imagent/pulls?"):
             return self.pulls
         raise AssertionError(path)
 

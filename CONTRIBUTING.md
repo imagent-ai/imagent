@@ -25,7 +25,7 @@ contributors a clear way to help improve the software Gittensor is supporting.
 
 ## What to work on
 
-Start from an open [issue](https://github.com/imagent-ai/imagent/issues). Issues
+Start from an open [issue](https://github.com/gittensor-agent-forge/gt-imagent/issues). Issues
 labeled `good first issue` are the easiest entry points, and `crown` marks the
 highest-value work. Comment on an issue to claim it before you start.
 
