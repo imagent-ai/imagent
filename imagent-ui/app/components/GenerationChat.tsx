@@ -174,6 +174,7 @@ export function GenerationChat() {
   const preserveModalTriggerRef = useRef(false);
   const promptTextareaRef = useRef<HTMLTextAreaElement | null>(null);
   const imageInputRef = useRef<HTMLInputElement | null>(null);
+  const chatEndRef = useRef<HTMLDivElement | null>(null);
 
   async function loadRuntimeStatus() {
     try {
@@ -385,6 +386,10 @@ export function GenerationChat() {
   const modalSession = modal && "sessionId" in modal
     ? sessions.find((session) => session.id === modal.sessionId)
     : null;
+
+  useLayoutEffect(() => {
+    chatEndRef.current?.scrollIntoView({ block: "end" });
+  }, [activeSessionId, activeSession.messages.length, activeIsGenerating]);
 
   function createSession() {
     const reusableSession = sessions.find((session) => session.messages.length === 0);
@@ -706,6 +711,10 @@ export function GenerationChat() {
     }
   }
 
+  function scrollChatToBottom() {
+    chatEndRef.current?.scrollIntoView({ block: "end" });
+  }
+
   return (
     <div className="imagent-landing generation-shell generation-redesign">
       <LandingBackgroundFx />
@@ -869,7 +878,7 @@ export function GenerationChat() {
                           <>
                             <div className="generation-message-image">
                               {/* eslint-disable-next-line @next/next/no-img-element */}
-                              <img src={message.imageUrl} alt="Generated image" />
+                              <img src={message.imageUrl} alt="Generated image" onLoad={scrollChatToBottom} />
                             </div>
                             <div className="generation-message-actions">
                               <a href={message.imageUrl} download={message.imageFileName || "imagent-output.png"}>
@@ -969,6 +978,7 @@ export function GenerationChat() {
                 </div>
               </div>
             </form>
+            <div ref={chatEndRef} aria-hidden="true" />
           </section>
         </div>
       </main>
