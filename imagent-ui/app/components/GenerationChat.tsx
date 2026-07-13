@@ -32,7 +32,7 @@ import {
   Trash2,
   X
 } from "lucide-react";
-import { LandingBackgroundFx } from "@/app/components/EffectCard";
+import { LandingBackgroundFx } from "@/app/components/LandingBackgroundFx";
 import { ScrollReveal } from "@/app/components/ScrollReveal";
 import { IMAGENT_GENERATION_MODEL_ID, IMAGENT_GENERATION_MODEL_NAME } from "@/lib/models";
 
