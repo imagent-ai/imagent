@@ -966,7 +966,7 @@ function mostRecent(entries: LeaderboardEntry[]) {
 }
 
 function isEligible(entry: LeaderboardEntry) {
-  return entry.improvement.mergeEligible;
+  return entry.status === "pass" && entry.improvement.mergeEligible;
 }
 
 function isResolvedPullRequest(entry: LeaderboardEntry) {

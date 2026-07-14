@@ -16,6 +16,9 @@ export const metadata: Metadata = {
   }
 };
 
+// Imported benchmark reports must be visible without a rebuild or redeploy.
+export const dynamic = "force-dynamic";
+
 export default async function LeaderboardPage() {
   const entries = await listLeaderboardEntries();
 
