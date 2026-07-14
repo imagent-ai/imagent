@@ -82,7 +82,7 @@ def test_runner_executes_local_imagent_and_writes_report(openrouter_http_mock: N
     assert result.status == "pass"
     assert result.overall_score == 100.0
     assert report["schema_version"] == "1.0"
-    assert report["repository"] == "imagent-ai/imagent"
+    assert report["repository"] == "gittensor-agent-forge/gt-imagent"
     assert report["metrics"]["case_count"] == 5
     assert report["policy"]["passed"] is True
     assert report["ranking"]["baseline_score"] is None
@@ -137,7 +137,7 @@ def test_runner_reads_pull_request_metadata_from_github_event(
                     "number": 77,
                     "title": "feat: benchmark metadata",
                     "state": "open",
-                    "html_url": "https://github.com/imagent-ai/imagent/pull/77",
+                    "html_url": "https://github.com/gittensor-agent-forge/gt-imagent/pull/77",
                     "merged_at": None,
                     "closed_at": None,
                     "user": {
@@ -159,7 +159,7 @@ def test_runner_reads_pull_request_metadata_from_github_event(
         "number": 77,
         "title": "feat: benchmark metadata",
         "state": "open",
-        "html_url": "https://github.com/imagent-ai/imagent/pull/77",
+        "html_url": "https://github.com/gittensor-agent-forge/gt-imagent/pull/77",
         "merged_at": None,
         "closed_at": None,
     }
@@ -174,7 +174,7 @@ def test_runner_reads_pull_request_metadata_from_github_event(
 
 
 def test_normalize_repository_identifier_handles_common_github_urls() -> None:
-    assert _normalize_repository_identifier("https://github.com/imagent-ai/imagent.git") == "imagent-ai/imagent"
+    assert _normalize_repository_identifier("https://github.com/gittensor-agent-forge/gt-imagent.git") == "gittensor-agent-forge/gt-imagent"
     assert _normalize_repository_identifier("git@github.com:imagent-ai/imagent-bench.git") == "imagent-ai/imagent-bench"
 
 
