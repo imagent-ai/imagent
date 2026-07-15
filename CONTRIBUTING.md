@@ -43,6 +43,12 @@ no Leaderboard UI PR is benchmarked or auto-merged. Maintainers select and merge
 the strongest coherent design; valid non-winning submissions stay open for a
 later update or review.
 
+Only one merged PR has the active round-winner reward at a time. When a new
+winner is labeled, automation converts every prior winner to
+past-round-winner and removes its round-winner label. The archived PR remains
+visible, but it no longer earns current competition score. leaderboard-ui-pass
+is a validation label, not a reward label.
+
 ## Paused Tracks
 
 Agent Benchmark and Generation UI competitions are paused. Contributor PRs for
@@ -103,3 +109,5 @@ round currently runs in GitHub Actions.
 - needs-evidence: valid Leaderboard UI PR is missing a screenshot or video.
 - invalid-pr: PR was closed because it violates the active contributor policy.
 - duplicate-pr: contributor opened more than one active Leaderboard UI PR.
+- round-winner: the one merged PR eligible for the active winner reward.
+- past-round-winner: an archived winner with no active competition reward.

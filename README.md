@@ -101,6 +101,12 @@ compare them and merge the strongest coherent design manually. Valid
 non-winning submissions are not closed automatically and can be improved for a
 later review.
 
+Only one merged PR can be the active reward winner. When a maintainer adds
+round-winner to a new merged PR, automation moves every previous winner to
+past-round-winner and removes its round-winner label. The prior work remains
+visible in the winner history, but no longer earns current competition score.
+leaderboard-ui-pass remains a validation label, not a reward label.
+
 ## Paused Tracks
 
 Agent Benchmark and Generation UI are not active contributor tracks. A
@@ -167,6 +173,8 @@ from the sibling imagent-bench checkout.
 - needs-evidence: valid Leaderboard UI PR is missing a screenshot or video.
 - invalid-pr: PR was closed because it violates the active contributor policy.
 - duplicate-pr: contributor opened more than one active Leaderboard UI PR.
+- round-winner: the one merged PR eligible for the active winner reward.
+- past-round-winner: an archived winner with no active competition reward.
 
 ## Design Principles
 

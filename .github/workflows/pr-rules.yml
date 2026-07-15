@@ -42,7 +42,6 @@ jobs:
               'benchmark-running',
               'round-benchmark-running',
               'round-eligible',
-              'round-winner',
               'below-threshold'
             ];
             const evidenceCommentMarker = '<!-- imagent:needs-leaderboard-evidence -->';
