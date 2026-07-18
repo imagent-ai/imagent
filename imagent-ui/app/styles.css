@@ -11320,20 +11320,15 @@ body .leaderboard-page-title {
   width: 1px;
 }
 
+/* The candidate queue is paused and carries no rows, so it reads as a status
+   strip above the king rather than a column that competes with it for width. */
 body .leaderboard-state-priority {
-  align-items: stretch;
   display: grid;
   gap: 18px;
-  grid-template-columns: minmax(0, 1.42fr) minmax(350px, 0.9fr);
+  grid-template-columns: minmax(0, 1fr);
   min-width: 0;
 }
 
-body .leaderboard-candidate-region {
-  display: grid;
-  min-width: 0;
-}
-
-body .leaderboard-candidate-panel,
 body .leaderboard-history-panel,
 body .leaderboard-king-panel {
   background: transparent;
@@ -11417,73 +11412,69 @@ body .leaderboard-panel-head > strong {
 }
 
 /* Candidate queue */
-body .leaderboard-candidate-panel {
-  display: grid;
-  grid-template-rows: auto minmax(0, 1fr);
-  min-height: 610px;
-  overflow: hidden;
-}
-
-body .leaderboard-candidate-head {
+body .leaderboard-candidate-strip {
   align-items: center;
-  border-bottom: 1px solid rgba(99, 222, 255, 0.12);
-  display: flex;
-  gap: 12px;
-  justify-content: space-between;
-  min-width: 0;
-  padding: 14px 16px;
-}
-
-body .leaderboard-candidate-head .leaderboard-panel-head {
-  flex: 1 1 auto;
-}
-
-body .leaderboard-candidate-empty {
-  align-content: center;
-  display: grid;
-  justify-items: center;
-  min-height: 0;
-  padding: 28px;
-}
-
-body .leaderboard-candidate-empty-copy {
-  align-items: center;
+  background: transparent;
+  border: 1px solid var(--leaderboard-line);
+  border-radius: 14px;
   display: grid;
   gap: 13px;
-  grid-template-columns: 56px minmax(0, 1fr);
-  max-width: 420px;
+  grid-template-columns: 38px minmax(0, 1fr) auto;
+  min-width: 0;
+  padding: 12px 16px;
 }
 
-body .leaderboard-candidate-empty-copy > span:first-child {
+body .leaderboard-candidate-strip-icon {
   align-items: center;
   background: rgba(0, 226, 251, 0.09);
   border: 1px solid rgba(0, 226, 251, 0.2);
-  border-radius: 16px;
+  border-radius: 11px;
   color: var(--leaderboard-cyan);
   display: inline-flex;
-  height: 56px;
+  height: 38px;
   justify-content: center;
-  width: 56px;
+  width: 38px;
 }
 
-body .leaderboard-candidate-empty-copy strong {
-  color: #ffffff;
-  font-size: 17px;
+body .leaderboard-candidate-strip-copy {
+  min-width: 0;
+}
+
+body .leaderboard-candidate-strip-copy strong {
+  color: var(--leaderboard-cyan);
+  display: block;
+  font-family: var(--font-jetbrains), "JetBrains Mono", ui-monospace, monospace;
+  font-size: 11px;
   font-weight: 900;
+  text-transform: uppercase;
 }
 
-body .leaderboard-candidate-empty-copy p {
+body .leaderboard-candidate-strip-copy p {
   color: var(--leaderboard-muted);
-  font-size: 13px;
-  line-height: 1.5;
-  margin: 5px 0 0;
+  font-size: 12px;
+  line-height: 1.45;
+  margin: 4px 0 0;
+}
+
+body .leaderboard-candidate-strip-state {
+  align-items: center;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  color: var(--leaderboard-muted);
+  display: inline-flex;
+  flex: 0 0 auto;
+  font-family: var(--font-jetbrains), "JetBrains Mono", ui-monospace, monospace;
+  font-size: 10px;
+  font-weight: 900;
+  min-height: 27px;
+  padding: 0 11px;
 }
 
 /* King panel */
 body .leaderboard-king-panel {
   display: grid;
-  grid-template-rows: auto auto auto auto minmax(0, 1fr);
-  min-height: 610px;
+  grid-template-rows: repeat(4, auto);
   overflow: hidden;
 }
 
@@ -11740,11 +11731,20 @@ body .leaderboard-delta.neutral {
   color: var(--leaderboard-muted);
 }
 
-body .leaderboard-king-detail-grid {
+/* Run metrics and model context share one band so the extra width reads as a
+   single row of five stats instead of two half-empty rows. */
+body .leaderboard-king-stats-band {
   border-bottom: 1px solid rgba(99, 222, 255, 0.11);
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  min-width: 0;
   padding: 0 18px;
+}
+
+body .leaderboard-king-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  min-width: 0;
 }
 
 body .leaderboard-king-detail-metric {
@@ -11789,26 +11789,17 @@ body .leaderboard-king-detail-metric strong {
 }
 
 body .leaderboard-king-model-grid {
-  border-bottom: 1px solid rgba(99, 222, 255, 0.11);
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  padding: 0 18px;
+  min-width: 0;
 }
 
 body .leaderboard-king-model-cell {
+  border-left: 1px solid rgba(99, 222, 255, 0.1);
   display: grid;
   gap: 7px;
   min-width: 0;
-  padding: 14px 0;
-}
-
-body .leaderboard-king-model-cell:first-child {
-  border-right: 1px solid rgba(99, 222, 255, 0.1);
-  padding-right: 14px;
-}
-
-body .leaderboard-king-model-cell + .leaderboard-king-model-cell {
-  padding-left: 14px;
+  padding: 14px 12px;
 }
 
 body .leaderboard-king-model-cell > strong {
@@ -11828,14 +11819,13 @@ body .leaderboard-king-detail-section {
   padding: 16px 18px 18px;
 }
 
-body .leaderboard-king-dimensions {
-  grid-template-rows: auto minmax(0, 1fr);
-}
-
+/* Dimension bars sit on their own natural rhythm; they no longer stretch to
+   absorb whatever height the panel has left over. */
 body .leaderboard-king-dimension-list {
-  align-content: space-between;
+  align-content: start;
   display: grid;
-  gap: 10px;
+  gap: 14px 22px;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
 }
 
 body .leaderboard-king-dimension {
@@ -12695,30 +12685,23 @@ body .leaderboard-pr-modal-dimensions small {
   }
 }
 
-@media (min-width: 1041px) {
-  body .leaderboard-state-priority {
-    --leaderboard-priority-height: clamp(610px, calc(100dvh - 104px), 720px);
-    grid-auto-rows: var(--leaderboard-priority-height);
-  }
-
-  body .leaderboard-state-priority > .leaderboard-candidate-region,
-  body .leaderboard-state-priority > .leaderboard-king-panel,
-  body .leaderboard-state-priority > .leaderboard-candidate-region > .leaderboard-candidate-panel {
-    height: var(--leaderboard-priority-height);
-    min-height: 0;
-  }
-}
-
 @media (max-width: 1040px) {
-  body .leaderboard-state-priority {
+  body .leaderboard-king-stats-band {
     grid-template-columns: minmax(0, 1fr);
   }
 
-  body .leaderboard-candidate-panel,
-  body .leaderboard-king-panel {
-    min-height: 0;
+  body .leaderboard-king-model-grid {
+    border-top: 1px solid rgba(99, 222, 255, 0.1);
   }
 
+  body .leaderboard-king-model-cell:first-child {
+    border-left: 0;
+    padding-left: 0;
+  }
+
+  body .leaderboard-king-model-cell:last-child {
+    padding-right: 0;
+  }
 }
 
 @media (max-width: 700px) {
@@ -12726,7 +12709,6 @@ body .leaderboard-pr-modal-dimensions small {
     padding: 16px 14px 30px;
   }
 
-  body .leaderboard-candidate-panel,
   body .leaderboard-history-panel,
   body .leaderboard-king-panel {
     border-radius: 15px;
@@ -12803,8 +12785,15 @@ body .leaderboard-pr-modal-dimensions small {
 }
 
 @media (max-width: 520px) {
-  body .leaderboard-candidate-head {
+  body .leaderboard-candidate-strip {
+    gap: 11px;
+    grid-template-columns: 38px minmax(0, 1fr);
     padding: 12px 14px;
+  }
+
+  body .leaderboard-candidate-strip-state {
+    grid-column: 2;
+    justify-self: start;
   }
 
   body .leaderboard-king-head,
@@ -12823,11 +12812,14 @@ body .leaderboard-pr-modal-dimensions small {
     font-size: 29px;
   }
 
+  body .leaderboard-king-stats-band {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
   body .leaderboard-king-detail-grid,
   body .leaderboard-king-model-grid {
     grid-template-columns: minmax(0, 1fr);
-    padding-left: 16px;
-    padding-right: 16px;
   }
 
   body .leaderboard-king-detail-metric,
@@ -12842,15 +12834,11 @@ body .leaderboard-pr-modal-dimensions small {
     border-top: 1px solid rgba(99, 222, 255, 0.1);
   }
 
-  body .leaderboard-king-model-cell:first-child,
-  body .leaderboard-king-model-cell + .leaderboard-king-model-cell {
-    border: 0;
+  body .leaderboard-king-model-cell {
+    border-left: 0;
+    border-top: 1px solid rgba(99, 222, 255, 0.1);
     padding-left: 0;
     padding-right: 0;
-  }
-
-  body .leaderboard-king-model-cell + .leaderboard-king-model-cell {
-    border-top: 1px solid rgba(99, 222, 255, 0.1);
   }
 
   body .leaderboard-history-filters {

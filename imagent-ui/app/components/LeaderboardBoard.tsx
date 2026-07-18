@@ -10,7 +10,6 @@ import {
   Eye,
   GitMerge,
   GitPullRequest,
-  GitPullRequestArrow,
   History,
   Hourglass,
   List,
@@ -213,18 +212,20 @@ function KingCard({
         </div>
       </div>
 
-      <div className="leaderboard-king-detail-grid">
-        <KingDetailMetric icon={<Timer size={14} />} label="P95 latency" value={`${entry.latencyP95Ms.toFixed(0)} ms`} />
-        <KingDetailMetric icon={<WalletCards size={14} />} label="Run cost" value={`$${entry.costUsd.toFixed(5)}`} />
-        <KingDetailMetric icon={<Activity size={14} />} label="Benchmark" value={formatBenchmarkVersion(entry.benchmarkVersion)} />
+      <div className="leaderboard-king-stats-band">
+        <div className="leaderboard-king-detail-grid">
+          <KingDetailMetric icon={<Timer size={14} />} label="P95 latency" value={`${entry.latencyP95Ms.toFixed(0)} ms`} />
+          <KingDetailMetric icon={<WalletCards size={14} />} label="Run cost" value={`$${entry.costUsd.toFixed(5)}`} />
+          <KingDetailMetric icon={<Activity size={14} />} label="Benchmark" value={formatBenchmarkVersion(entry.benchmarkVersion)} />
+        </div>
+
+        <div className="leaderboard-king-model-grid">
+          <KingModelDetail label="Generation Model" model={entry.generationModel} />
+          <KingModelDetail label="Evaluation Model" model={entry.judgeModel} />
+        </div>
       </div>
 
-      <div className="leaderboard-king-model-grid">
-        <KingModelDetail label="Generation Model" model={entry.generationModel} />
-        <KingModelDetail label="Evaluation Model" model={entry.judgeModel} />
-      </div>
-
-      <div className="leaderboard-king-detail-section leaderboard-king-dimensions">
+      <div className="leaderboard-king-detail-section">
         <span>Benchmark Profile</span>
         {entry.dimensions.length ? (
           <div className="leaderboard-king-dimension-list">
@@ -249,22 +250,13 @@ function KingCard({
 
 function CandidateQueue() {
   return (
-    <section className="leaderboard-candidate-region" aria-label="Candidate PR queue">
-      <section className="leaderboard-candidate-panel">
-        <div className="leaderboard-candidate-head">
-          <PanelHeader inlineValue icon={<GitPullRequestArrow size={15} />} title="Candidate Queue" value="Paused" />
-        </div>
-
-        <div className="leaderboard-candidate-empty">
-          <div className="leaderboard-candidate-empty-copy">
-            <span><Hourglass size={22} /></span>
-            <div>
-              <strong>Candidate intake is paused</strong>
-              <p>Active pull request evaluations will appear here when the benchmark workflow resumes.</p>
-            </div>
-          </div>
-        </div>
-      </section>
+    <section className="leaderboard-candidate-strip" aria-label="Candidate PR queue">
+      <span className="leaderboard-candidate-strip-icon" aria-hidden="true"><Hourglass size={16} /></span>
+      <div className="leaderboard-candidate-strip-copy">
+        <strong>Candidate Queue</strong>
+        <p>Active pull request evaluations appear here when the benchmark workflow resumes.</p>
+      </div>
+      <span className="leaderboard-candidate-strip-state">Paused</span>
     </section>
   );
 }
