@@ -20,6 +20,7 @@ import {
   Timer,
   TrendingDown,
   TrendingUp,
+  Users,
   WalletCards,
   X,
   XCircle
@@ -41,6 +42,21 @@ type BenchmarkStatus = {
 type EligibilityStatus = {
   label: string;
   tone: "eligible" | "ineligible";
+};
+type FrontierPoint = {
+  runId: string;
+  score: number;
+  frontier: number;
+  completedAt: string;
+  isNewHigh: boolean;
+};
+type ArchiveSummary = {
+  reportCount: number;
+  mergedCount: number;
+  eligibleCount: number;
+  contributorCount: number;
+  trajectory: FrontierPoint[];
+  climb: number | null;
 };
 
 const HISTORY_PAGE_SIZES = [4, 8, 12] as const;
@@ -78,6 +94,7 @@ export function LeaderboardBoard({ entries }: { entries: LeaderboardEntry[] }) {
   }, []);
 
   const king = useMemo(() => getCurrentKing(entries), [entries]);
+  const archive = useMemo(() => buildArchiveSummary(entries), [entries]);
   const filteredHistoryEntries = useMemo(
     () => buildHistory(entries, historyFilter, query),
     [entries, historyFilter, query]
@@ -99,11 +116,22 @@ export function LeaderboardBoard({ entries }: { entries: LeaderboardEntry[] }) {
   return (
     <>
       <section className="leaderboard-live-shell leaderboard-state-shell" aria-label="PR benchmark history">
-        <h1 className="leaderboard-page-title">PR Benchmark History</h1>
+        <header className="leaderboard-page-head">
+          <span className="leaderboard-page-kicker">
+            <History size={13} />
+            Benchmark Archive
+          </span>
+          <h1 className="leaderboard-page-title">PR Benchmark History</h1>
+          <p className="leaderboard-page-lede">
+            The current king, every completed report, and how the frontier moved.
+          </p>
+        </header>
+
+        <CandidateQueue />
 
         <div className="leaderboard-state-priority">
-          <CandidateQueue />
           <KingCard entry={king} onOpenDetails={openEntryDetails} />
+          <ArchiveRail archive={archive} />
         </div>
 
         <HistoryPanel
@@ -249,23 +277,149 @@ function KingCard({
 
 function CandidateQueue() {
   return (
-    <section className="leaderboard-candidate-region" aria-label="Candidate PR queue">
-      <section className="leaderboard-candidate-panel">
-        <div className="leaderboard-candidate-head">
-          <PanelHeader inlineValue icon={<GitPullRequestArrow size={15} />} title="Candidate Queue" value="Paused" />
-        </div>
+    <section className="leaderboard-intake-strip" aria-label="Candidate PR queue">
+      <span className="leaderboard-intake-icon" aria-hidden="true"><GitPullRequestArrow size={16} /></span>
+      <div className="leaderboard-intake-copy">
+        <strong>Candidate Queue</strong>
+        <p>Intake is paused — active pull request evaluations will appear here when the benchmark workflow resumes.</p>
+      </div>
+      <span className="leaderboard-intake-state"><Hourglass size={12} />Paused</span>
+    </section>
+  );
+}
 
-        <div className="leaderboard-candidate-empty">
-          <div className="leaderboard-candidate-empty-copy">
-            <span><Hourglass size={22} /></span>
-            <div>
-              <strong>Candidate intake is paused</strong>
-              <p>Active pull request evaluations will appear here when the benchmark workflow resumes.</p>
-            </div>
+function ArchiveRail({ archive }: { archive: ArchiveSummary }) {
+  return (
+    <div className="leaderboard-archive-rail">
+      <FrontierProgress archive={archive} />
+      <ArchiveStats archive={archive} />
+    </div>
+  );
+}
+
+function FrontierProgress({ archive }: { archive: ArchiveSummary }) {
+  const latest = archive.trajectory[archive.trajectory.length - 1] ?? null;
+
+  return (
+    <section className="leaderboard-frontier-panel" aria-label="Frontier score progress">
+      <div className="leaderboard-frontier-head">
+        <PanelHeader
+          inlineValue
+          icon={<TrendingUp size={15} />}
+          title="Frontier Progress"
+          value={latest ? latest.frontier.toFixed(2) : "—"}
+        />
+      </div>
+      {archive.trajectory.length ? (
+        <div className="leaderboard-frontier-body">
+          <FrontierChart trajectory={archive.trajectory} />
+          <div className="leaderboard-frontier-summary">
+            <span>
+              {formatShortDate(archive.trajectory[0].completedAt)}
+              {" → "}
+              {formatShortDate(archive.trajectory[archive.trajectory.length - 1].completedAt)}
+            </span>
+            <strong className={`leaderboard-delta ${deltaTone(archive.climb)}`}>
+              {deltaIcon(archive.climb)}
+              {formatDelta(archive.climb)} since first report
+            </strong>
           </div>
         </div>
-      </section>
+      ) : (
+        <div className="leaderboard-frontier-empty">
+          <p>The frontier line appears after the first completed benchmark report.</p>
+        </div>
+      )}
     </section>
+  );
+}
+
+function FrontierChart({ trajectory }: { trajectory: FrontierPoint[] }) {
+  const width = 280;
+  const height = 96;
+  const pad = 10;
+
+  const frontiers = trajectory.map((point) => point.frontier);
+  const scores = trajectory.map((point) => point.score);
+  const min = Math.min(...frontiers, ...scores);
+  const max = Math.max(...frontiers, ...scores);
+  const span = Math.max(max - min, 1);
+
+  const pointX = (index: number) =>
+    trajectory.length > 1
+      ? pad + (index * (width - pad * 2)) / (trajectory.length - 1)
+      : width / 2;
+  const pointY = (value: number) =>
+    height - pad - ((value - min) * (height - pad * 2)) / span;
+
+  const linePoints = trajectory
+    .map((point, index) => `${pointX(index).toFixed(1)},${pointY(point.frontier).toFixed(1)}`)
+    .join(" ");
+  const areaPoints = `${pad},${height - pad} ${linePoints} ${pointX(trajectory.length - 1).toFixed(1)},${height - pad}`;
+
+  return (
+    <svg
+      className="leaderboard-frontier-chart"
+      role="img"
+      aria-label={`Best benchmark score per completed report, from ${trajectory[0].frontier.toFixed(2)} to ${trajectory[trajectory.length - 1].frontier.toFixed(2)}`}
+      viewBox={`0 0 ${width} ${height}`}
+    >
+      <defs>
+        <linearGradient id="leaderboard-frontier-fill" x1="0" x2="0" y1="0" y2="1">
+          <stop offset="0%" stopColor="rgba(0, 226, 251, 0.28)" />
+          <stop offset="100%" stopColor="rgba(0, 226, 251, 0)" />
+        </linearGradient>
+      </defs>
+      {trajectory.length > 1 ? (
+        <polygon fill="url(#leaderboard-frontier-fill)" points={areaPoints} />
+      ) : null}
+      <polyline
+        className="leaderboard-frontier-line"
+        fill="none"
+        points={linePoints}
+        stroke="var(--leaderboard-cyan)"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="2"
+      />
+      {trajectory.map((point, index) => point.isNewHigh ? (
+        <circle
+          className="leaderboard-frontier-marker"
+          cx={pointX(index)}
+          cy={pointY(point.frontier)}
+          key={point.runId}
+          r={index === trajectory.length - 1 ? 4 : 3}
+        />
+      ) : null)}
+    </svg>
+  );
+}
+
+function ArchiveStats({ archive }: { archive: ArchiveSummary }) {
+  return (
+    <section className="leaderboard-archive-stats" aria-label="Archive totals">
+      <ArchiveStatTile icon={<History size={14} />} label="Reports" value={String(archive.reportCount)} />
+      <ArchiveStatTile icon={<GitMerge size={14} />} label="Merged PRs" value={String(archive.mergedCount)} />
+      <ArchiveStatTile icon={<Check size={14} />} label="Historical eligible" value={String(archive.eligibleCount)} />
+      <ArchiveStatTile icon={<Users size={14} />} label="Contributors" value={String(archive.contributorCount)} />
+    </section>
+  );
+}
+
+function ArchiveStatTile({
+  icon,
+  label,
+  value
+}: {
+  icon: ReactNode;
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="leaderboard-archive-stat">
+      <span>{icon}{label}</span>
+      <strong>{value}</strong>
+    </div>
   );
 }
 
@@ -947,6 +1101,48 @@ function buildHistory(
       return haystack.includes(normalizedQuery);
     })
     .sort((left, right) => Date.parse(right.completedAt) - Date.parse(left.completedAt));
+}
+
+function buildArchiveSummary(entries: LeaderboardEntry[]): ArchiveSummary {
+  const chronological = [...entries].sort(
+    (left, right) => (parseTimestamp(left.completedAt) ?? 0) - (parseTimestamp(right.completedAt) ?? 0)
+  );
+
+  let frontier = Number.NEGATIVE_INFINITY;
+  const trajectory = chronological.map((entry) => {
+    const isNewHigh = entry.score > frontier;
+    frontier = Math.max(frontier, entry.score);
+    return {
+      runId: entry.runId,
+      score: entry.score,
+      frontier,
+      completedAt: entry.completedAt,
+      isNewHigh
+    };
+  });
+
+  const first = trajectory[0] ?? null;
+  const latest = trajectory[trajectory.length - 1] ?? null;
+
+  return {
+    reportCount: entries.length,
+    mergedCount: entries.filter((entry) => entry.pullRequest.state === "merged").length,
+    eligibleCount: entries.filter((entry) => isEligible(entry)).length,
+    contributorCount: new Set(entries.map((entry) => entry.contributor.login)).size,
+    trajectory,
+    climb: first && latest ? latest.frontier - first.score : null
+  };
+}
+
+const SHORT_MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+function formatShortDate(value: string) {
+  const timestamp = parseTimestamp(value);
+  if (timestamp === null) {
+    return "unknown";
+  }
+  const date = new Date(timestamp);
+  return `${SHORT_MONTHS[date.getUTCMonth()]} ${date.getUTCDate()}`;
 }
 
 function getCurrentKing(entries: LeaderboardEntry[]) {
