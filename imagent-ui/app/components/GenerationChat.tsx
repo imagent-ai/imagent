@@ -385,6 +385,14 @@ export function GenerationChat() {
     setSidebarCollapsed(false);
   }
 
+  function switchSession(sessionId: string) {
+    if (!sessions.length || sessionId === activeSessionId) {
+      return;
+    }
+    setActiveSessionId(sessionId);
+    setPrompt("");
+  }
+
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     void sendPrompt(prompt);
@@ -704,9 +712,7 @@ export function GenerationChat() {
                     aria-label={session.title}
                     title={session.title}
                     onClick={() => {
-                      if (sessions.length) {
-                        setActiveSessionId(session.id);
-                      }
+                      switchSession(session.id);
                     }}
                   >
                     <MessageSquareText size={16} />
@@ -723,9 +729,7 @@ export function GenerationChat() {
                         className="generation-session-select"
                         type="button"
                         onClick={() => {
-                          if (sessions.length) {
-                            setActiveSessionId(session.id);
-                          }
+                          switchSession(session.id);
                         }}
                       >
                         <MessageSquareText size={16} />
